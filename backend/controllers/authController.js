@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const asyncHandler = require('../middleware/asyncHandler');
+const { asyncHandler } = require('../middleware/asyncHandler');
 
 // @desc    Register user
 // @route   POST /api/auth/register

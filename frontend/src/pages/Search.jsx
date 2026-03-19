@@ -98,7 +98,7 @@ export default function Search() {
             {customers.length ? (
               <div className="stack">
                 {customers.map((c) => (
-                  <Link key={c.id} className="resultRow" to={`/customers/${c.id}`}>
+                  <Link key={c.id} className="resultRow modern" to={`/customers/${c.id}`}>
                     <div>
                       <div className="resultTitle">{c.name}</div>
                       <div className="muted resultSub">
@@ -124,7 +124,7 @@ export default function Search() {
             {leads.length ? (
               <div className="stack">
                 {leads.map((l) => (
-                  <Link key={l.id} className="resultRow" to={`/leads/${l.id}`}>
+                  <Link key={l.id} className="resultRow modern" to={`/leads/${l.id}`}>
                     <div>
                       <div className="resultTitle">{l.name}</div>
                       <div className="muted resultSub">

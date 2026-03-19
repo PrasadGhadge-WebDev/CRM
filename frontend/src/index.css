@@ -1,3 +1,11 @@
+@import './styles/variables.css';
+@import './styles/animations.css';
+@import './styles/layout.css';
+@import './styles/sidebar.css';
+@import './styles/topbar.css';
+@import './styles/components.css';
+@import './styles/dashboard.css';
+
 :root {
   font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
   font-size: 16px;
@@ -23,4 +31,3 @@ body {
 a {
   color: inherit;
 }
-

@@ -38,10 +38,6 @@ export default function Sidebar({ open, onClose }) {
             <div className="brandSub muted">CRM Module</div>
           </div>
         </div>
-
-        <button className="sidebarCloseBtn iconBtn" type="button" onClick={onClose} aria-label="Close menu">
-          <Icon name="close" />
-        </button>
       </div>
 
       <div className="sidebarNav">
@@ -62,9 +58,9 @@ export default function Sidebar({ open, onClose }) {
             <span className="navIcon">
               <Icon name="users" />
             </span>
-            CRM
+            <span className="navLabel">CRM</span>
             <span className={`navChevron ${crmOpen ? 'open' : ''}`} aria-hidden="true">
-              {'\u25B8'}
+              <Icon name="chevronDown" />
             </span>
           </button>
 
@@ -96,4 +92,3 @@ export default function Sidebar({ open, onClose }) {
     </aside>
   )
 }
-

@@ -9,27 +9,42 @@ import LeadsList from './modules/crm/pages/LeadsList.jsx'
 import LeadForm from './modules/crm/pages/LeadForm.jsx'
 import LeadDetail from './modules/crm/pages/LeadDetail.jsx'
 import LeadNotes from './modules/crm/pages/LeadNotes.jsx'
+import Login from './pages/Login.jsx'
+import Register from './pages/Register.jsx'
+import { AuthProvider } from './context/AuthContext'
+import ProtectedRoute from './components/ProtectedRoute.jsx'
 
 export default function App() {
   return (
-    <Routes>
-      <Route element={<AppLayout />}>
-        <Route index element={<Dashboard />} />
-        <Route path="/search" element={<Search />} />
+    <AuthProvider>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
-        <Route path="/customers" element={<CustomersList />} />
-        <Route path="/customers/new" element={<CustomerForm mode="create" />} />
-        <Route path="/customers/:id" element={<CustomerForm mode="edit" />} />
+        <Route
+          element={
+            <ProtectedRoute>
+              <AppLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Dashboard />} />
+          <Route path="/search" element={<Search />} />
 
-        <Route path="/leads" element={<LeadsList />} />
-        <Route path="/leads/new" element={<LeadForm mode="create" />} />
-        <Route path="/leads/:id/edit" element={<LeadForm mode="edit" />} />
-        <Route path="/leads/:id" element={<LeadDetail />} />
+          <Route path="/customers" element={<CustomersList />} />
+          <Route path="/customers/new" element={<CustomerForm mode="create" />} />
+          <Route path="/customers/:id" element={<CustomerForm mode="edit" />} />
 
-        <Route path="/lead-notes" element={<LeadNotes />} />
+          <Route path="/leads" element={<LeadsList />} />
+          <Route path="/leads/new" element={<LeadForm mode="create" />} />
+          <Route path="/leads/:id/edit" element={<LeadForm mode="edit" />} />
+          <Route path="/leads/:id" element={<LeadDetail />} />
 
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-    </Routes>
+          <Route path="/lead-notes" element={<LeadNotes />} />
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    </AuthProvider>
   )
 }

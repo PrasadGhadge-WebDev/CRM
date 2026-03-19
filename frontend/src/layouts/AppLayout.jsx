@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import Sidebar from './Sidebar.jsx'
 import Topbar from './Topbar.jsx'
 
@@ -20,7 +20,7 @@ export default function AppLayout() {
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark')
 
   useEffect(() => {
-    document.body.setAttribute('data-theme', theme)
+    document.body.classList.toggle('dark', theme === 'dark')
     localStorage.setItem('theme', theme)
   }, [theme])
 
@@ -43,6 +43,11 @@ export default function AppLayout() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [sidebarOpen])
 
+  useEffect(() => {
+    document.body.classList.toggle('sidebar-open', sidebarOpen)
+    return () => document.body.classList.remove('sidebar-open')
+  }, [sidebarOpen])
+
   function toggleTheme() {
     setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
   }
@@ -63,6 +68,7 @@ export default function AppLayout() {
       <div
         className={`crmOverlay ${sidebarOpen ? 'open' : ''}`}
         role="presentation"
+        aria-hidden={!sidebarOpen}
         onClick={() => setSidebarOpen(false)}
       />
 
@@ -76,7 +82,8 @@ export default function AppLayout() {
           onSubmitSearch={submitSearch}
           theme={theme}
           onToggleTheme={toggleTheme}
-          onOpenSidebar={() => setSidebarOpen(true)}
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={() => setSidebarOpen((open) => !open)}
         />
 
         <main className="crmMain">
@@ -86,11 +93,18 @@ export default function AppLayout() {
         </main>
 
         <footer className="crmFooter muted">
-          <div>{`CRM \u2022 Customers \u2022 Leads \u2022 Lead Notes`}</div>
-          <div>{`\u00A9 ${new Date().getFullYear()}`}</div>
+          <div className="crmFooterLinks">
+            <Link to="/">Dashboard</Link>
+            <span className="bullet">&bull;</span>
+            <Link to="/customers">Customers</Link>
+            <span className="bullet">&bull;</span>
+            <Link to="/leads">Leads</Link>
+            <span className="bullet">&bull;</span>
+            <Link to="/lead-notes">Notes</Link>
+          </div>
+          <div className="crmFooterCopy">{` \u00A9 ${new Date().getFullYear()} CRM System. All rights reserved.`}</div>
         </footer>
       </div>
     </div>
   )
 }
-
