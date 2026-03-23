@@ -10,10 +10,11 @@ function buildSearchQuery(q) {
 }
 
 exports.listLeads = asyncHandler(async (req, res) => {
-  const { companyId, status, assignedTo, q, page = 1, limit = 20 } = req.query;
+  const { companyId, status, assignedTo, q, page = 1, limit = 20, sortField = 'created_at', sortOrder = 'desc' } = req.query;
 
   const pageNum = Math.max(1, Number(page) || 1);
   const limitNum = Math.min(100, Math.max(1, Number(limit) || 20));
+  const sort = { [sortField]: sortOrder === 'desc' ? -1 : 1 };
 
   const search = buildSearchQuery(q);
   const filter = {};
@@ -24,28 +25,27 @@ exports.listLeads = asyncHandler(async (req, res) => {
 
   const [items, total] = await Promise.all([
     Lead.find(filter)
-      .sort({ created_at: -1 })
+      .sort(sort)
       .skip((pageNum - 1) * limitNum)
       .limit(limitNum),
     Lead.countDocuments(filter),
   ]);
 
-  res.json({ items, page: pageNum, limit: limitNum, total });
+  res.ok({ items, page: pageNum, limit: limitNum, total });
 });
 
 exports.createLead = asyncHandler(async (req, res) => {
   const payload = req.body || {};
   const created = await Lead.create(payload);
-  res.status(201).json(created);
+  res.created(created);
 });
 
 exports.getLead = asyncHandler(async (req, res) => {
   const lead = await Lead.findById(req.params.id);
   if (!lead) {
-    res.status(404);
-    throw new Error('Lead not found');
+    return res.fail('Lead not found', 404);
   }
-  res.json(lead);
+  res.ok(lead);
 });
 
 exports.updateLead = asyncHandler(async (req, res) => {
@@ -54,34 +54,43 @@ exports.updateLead = asyncHandler(async (req, res) => {
     runValidators: true,
   });
   if (!updated) {
-    res.status(404);
-    throw new Error('Lead not found');
+    return res.fail('Lead not found', 404);
   }
-  res.json(updated);
+  res.ok(updated);
 });
 
 exports.deleteLead = asyncHandler(async (req, res) => {
   const deleted = await Lead.findByIdAndDelete(req.params.id);
   if (!deleted) {
-    res.status(404);
-    throw new Error('Lead not found');
+    return res.fail('Lead not found', 404);
   }
   await LeadNote.deleteMany({ lead_id: deleted.id });
-  res.json({ ok: true });
+  res.ok(null, 'Lead deleted');
 });
 
 exports.listLeadNotes = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 20 } = req.query;
   const leadId = req.params.id;
-  const notes = await LeadNote.find({ lead_id: leadId }).sort({ created_at: -1 });
-  res.json({ items: notes });
+
+  const pageNum = Math.max(1, Number(page) || 1);
+  const limitNum = Math.min(100, Math.max(1, Number(limit) || 20));
+
+  const [items, total] = await Promise.all([
+    LeadNote.find({ lead_id: leadId })
+      .sort({ created_at: -1 })
+      .skip((pageNum - 1) * limitNum)
+      .limit(limitNum),
+    LeadNote.countDocuments({ lead_id: leadId }),
+  ]);
+
+  res.ok({ items, total, page: pageNum, limit: limitNum });
 });
 
 exports.addLeadNote = asyncHandler(async (req, res) => {
   const leadId = req.params.id;
   const lead = await Lead.findById(leadId);
   if (!lead) {
-    res.status(404);
-    throw new Error('Lead not found');
+    return res.fail('Lead not found', 404);
   }
 
   const payload = req.body || {};
@@ -90,16 +99,15 @@ exports.addLeadNote = asyncHandler(async (req, res) => {
     user_id: payload.user_id,
     note: payload.note,
   });
-  res.status(201).json(created);
+  res.created(created);
 });
 
 exports.deleteLeadNote = asyncHandler(async (req, res) => {
   const { id, noteId } = req.params;
   const deleted = await LeadNote.findOneAndDelete({ _id: noteId, lead_id: id });
   if (!deleted) {
-    res.status(404);
-    throw new Error('Lead note not found');
+    return res.fail('Lead note not found', 404);
   }
-  res.json({ ok: true });
+  res.ok(null, 'Lead note deleted');
 });
 

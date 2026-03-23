@@ -60,6 +60,24 @@ export function Icon({ name }) {
         </svg>
       )
 
+    case 'alert':
+      return (
+        <svg {...common} aria-hidden="true">
+          <circle {...stroke} cx="12" cy="12" r="10" />
+          <line {...stroke} x1="12" y1="8" x2="12" y2="12" />
+          <line {...stroke} x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+      )
+
+    case 'info':
+      return (
+        <svg {...common} aria-hidden="true">
+          <circle {...stroke} cx="12" cy="12" r="10" />
+          <line {...stroke} x1="12" y1="16" x2="12" y2="12" />
+          <line {...stroke} x1="12" y1="8" x2="12.01" y2="8" />
+        </svg>
+      )
+
     case 'sun':
       return (
         <svg {...common} aria-hidden="true">
@@ -86,6 +104,14 @@ export function Icon({ name }) {
       return (
         <svg {...common} aria-hidden="true" style={{ width: 14, height: 14 }}>
           <path {...stroke} d="m6 9 6 6 6-6" />
+        </svg>
+      )
+
+    case 'arrowLeft':
+      return (
+        <svg {...common} aria-hidden="true">
+          <path {...stroke} d="M19 12H5" />
+          <path {...stroke} d="m12 19-7-7 7-7" />
         </svg>
       )
 
@@ -117,8 +143,107 @@ export function Icon({ name }) {
         </svg>
       )
 
+    case 'contacts':
+      return (
+        <svg {...common} aria-hidden="true">
+          <path {...stroke} d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle {...stroke} cx="9" cy="7" r="4" />
+          <path {...stroke} d="M22 21v-2a4 4 0 0 0-3-3.87" />
+          <path {...stroke} d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+      )
+
+    case 'tasks':
+      return (
+        <svg {...common} aria-hidden="true">
+          <path {...stroke} d="M9 11l3 3L22 4" />
+          <path {...stroke} d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+        </svg>
+      )
+
+    case 'reports':
+      return (
+        <svg {...common} aria-hidden="true">
+          <path {...stroke} d="M12 20V10" />
+          <path {...stroke} d="M18 20V4" />
+          <path {...stroke} d="M6 20v-4" />
+        </svg>
+      )
+
+    case 'deals':
+      return (
+        <svg {...common} aria-hidden="true">
+          <path {...stroke} d="M12 2v20" />
+          <path {...stroke} d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+        </svg>
+      )
+
+    case 'notes':
+      return (
+        <svg {...common} aria-hidden="true">
+          <path {...stroke} d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <path {...stroke} d="M14 2v6h6" />
+          <path {...stroke} d="M16 13H8" />
+          <path {...stroke} d="M16 17H8" />
+          <path {...stroke} d="M10 9H8" />
+        </svg>
+      )
+    case 'edit':
+      return (
+        <svg {...common} aria-hidden="true">
+          <path {...stroke} d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+          <path {...stroke} d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+        </svg>
+      )
+    case 'trash':
+      return (
+        <svg {...common} aria-hidden="true">
+          <polyline {...stroke} points="3 6 5 6 21 6" />
+          <path {...stroke} d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+          <line {...stroke} x1="10" y1="11" x2="10" y2="17" />
+          <line {...stroke} x1="14" y1="11" x2="14" y2="17" />
+        </svg>
+      )
+    case 'check':
+      return (
+        <svg {...common} aria-hidden="true">
+          <polyline {...stroke} points="20 6 9 17 4 12" />
+        </svg>
+      )
+    case 'undo':
+      return (
+        <svg {...common} aria-hidden="true">
+          <path {...stroke} d="M3 7V2h5" />
+          <path {...stroke} d="M3 2v5h5" />
+          <path {...stroke} d="M21 17a9 9 0 1 1-2.14-10.37L3 7" />
+        </svg>
+      )
+    case 'shoppingCart':
+      return (
+        <svg {...common} aria-hidden="true">
+          <circle {...stroke} cx="9" cy="21" r="1" />
+          <circle {...stroke} cx="20" cy="21" r="1" />
+          <path {...stroke} d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+        </svg>
+      )
+    case 'help':
+      return (
+        <svg {...common} aria-hidden="true">
+          <circle {...stroke} cx="12" cy="12" r="10" />
+          <path {...stroke} d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+          <line {...stroke} x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+      )
+    case 'package':
+      return (
+        <svg {...common} aria-hidden="true">
+          <path {...stroke} d="m7.5 4.21 4.5 2.66 4.5-2.66" />
+          <path {...stroke} d="m12 22 4.5-2.66V14.2l-4.5 2.66-4.5-2.66v5.14L12 22Z" />
+          <path {...stroke} d="m12 11.58 4.5-2.66V3.78L12 1.12 7.5 3.78v5.14l4.5 2.66Z" />
+        </svg>
+      )
+
     default:
       return null
   }
 }
-

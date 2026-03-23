@@ -1,52 +1,69 @@
 export default function Pagination({ page, limit, total, onPageChange, onLimitChange }) {
-  const totalPages = Math.max(1, Math.ceil((Number(total) || 0) / (Number(limit) || 1)))
-  const clampedPage = Math.min(totalPages, Math.max(1, Number(page) || 1))
-
-  const start = total ? (clampedPage - 1) * limit + 1 : 0
-  const end = total ? Math.min(total, clampedPage * limit) : 0
-
+  const totalPages = Math.ceil(total / limit)
+  
   return (
-    <div className="pager">
-      <div className="pagerLeft muted">
-        {total ? (
-          <>
-            Showing {start}
-            {'\u2013'}
-            {end} of {total}
-          </>
-        ) : (
-          <>No results</>
-        )}
-      </div>
-
-      <div className="pagerRight">
-        <select
-          className="input pagerLimit"
-          value={String(limit)}
-          onChange={(e) => onLimitChange?.(Number(e.target.value) || 20)}
-          aria-label="Rows per page"
+    <div className="pagination row">
+      <div className="paginationGroup row small-gap">
+        <button 
+          className="btn secondary small" 
+          onClick={() => onPageChange(page - 1)}
+          disabled={page <= 1}
         >
-          <option value="10">10 / page</option>
-          <option value="20">20 / page</option>
-          <option value="50">50 / page</option>
-          <option value="100">100 / page</option>
-        </select>
-
-        <button className="btn" onClick={() => onPageChange?.(clampedPage - 1)} disabled={clampedPage <= 1}>
-          Prev
+          Previous
         </button>
-        <div className="pagerInfo muted">
-          Page {clampedPage} / {totalPages}
+
+        <div className="pageInfo muted small">
+          Page {page} of {Math.max(1, totalPages)} ({total} total)
         </div>
-        <button
-          className="btn"
-          onClick={() => onPageChange?.(clampedPage + 1)}
-          disabled={clampedPage >= totalPages}
+
+        <button 
+          className="btn secondary small" 
+          onClick={() => onPageChange(page + 1)}
+          disabled={page >= totalPages}
         >
           Next
         </button>
       </div>
+
+      {onLimitChange && (
+        <div className="limitGroup row small-gap">
+          <span className="muted small">Show:</span>
+          <select 
+            className="input small" 
+            style={{ width: 'auto', padding: '2px 8px' }}
+            value={limit}
+            onChange={(e) => onLimitChange(Number(e.target.value))}
+          >
+            <option value="5">5</option>
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+          </select>
+        </div>
+      )}
+
+      <style>{`
+        .pagination {
+          margin-top: 24px;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px 16px;
+          background: rgba(0,0,0,0.02);
+          border-radius: 8px;
+        }
+        .paginationGroup {
+          align-items: center;
+          gap: 16px;
+        }
+        .limitGroup {
+          align-items: center;
+        }
+        .pageInfo {
+          font-weight: 500;
+          min-width: 120px;
+          text-align: center;
+        }
+      `}</style>
     </div>
   )
 }
-

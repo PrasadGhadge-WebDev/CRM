@@ -1,197 +1,225 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useCallback, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { Icon } from '../../../layouts/icons.jsx'
 import Pagination from '../../../components/Pagination.jsx'
+import FilterBar from '../../../components/FilterBar.jsx'
+import PageHeader from '../../../components/PageHeader.jsx'
 import { leadsApi } from '../../../services/leads.js'
+import { workflowApi } from '../../../services/workflow.js'
 import { useDebouncedValue } from '../../../utils/useDebouncedValue.js'
+import { useAuth } from '../../../context/AuthContext'
 
 export default function LeadsList() {
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const qParam = searchParams.get('q') || ''
-  const statusParam = searchParams.get('status') || ''
-  const sourceParam = searchParams.get('source') || ''
-  const pageParam = Math.max(1, Number(searchParams.get('page') || 1) || 1)
-  const limitParam = Math.min(100, Math.max(1, Number(searchParams.get('limit') || 20) || 20))
-
   const [items, setItems] = useState([])
-  const [q, setQ] = useState(qParam)
-  const [status, setStatus] = useState(statusParam)
-  const [source, setSource] = useState(sourceParam)
-  const [page, setPage] = useState(pageParam)
-  const [limit, setLimit] = useState(limitParam)
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  const debouncedQ = useDebouncedValue(q, 250)
+  // Filter & Sort State
+  const [filters, setFilters] = useState({
+    q: searchParams.get('q') || '',
+    status: searchParams.get('status') || '',
+    source: searchParams.get('source') || '',
+    sortField: searchParams.get('sortField') || 'created_at',
+    sortOrder: searchParams.get('sortOrder') || 'desc',
+    page: Math.max(1, Number(searchParams.get('page')) || 1),
+    limit: Math.min(100, Math.max(1, Number(searchParams.get('limit')) || 20)),
+  })
 
-  useEffect(() => setQ(qParam), [qParam])
-  useEffect(() => setStatus(statusParam), [statusParam])
-  useEffect(() => setSource(sourceParam), [sourceParam])
-  useEffect(() => setPage(pageParam), [pageParam])
-  useEffect(() => setLimit(limitParam), [limitParam])
+  const debouncedQ = useDebouncedValue(filters.q, 300)
 
-  const desiredParams = useMemo(() => {
+  useEffect(() => {
     const next = new URLSearchParams()
-    const trimmedQ = debouncedQ.trim()
-    if (trimmedQ) next.set('q', trimmedQ)
-    if (status.trim()) next.set('status', status.trim())
-    if (source.trim()) next.set('source', source.trim())
-    if (page > 1) next.set('page', String(page))
-    if (limit !== 20) next.set('limit', String(limit))
-    return next
-  }, [debouncedQ, status, source, page, limit])
+    if (debouncedQ.trim()) next.set('q', debouncedQ.trim())
+    if (filters.status) next.set('status', filters.status)
+    if (filters.source) next.set('source', filters.source)
+    if (filters.sortField !== 'created_at') next.set('sortField', filters.sortField)
+    if (filters.sortOrder !== 'desc') next.set('sortOrder', filters.sortOrder)
+    if (filters.page > 1) next.set('page', String(filters.page))
+    if (filters.limit !== 20) next.set('limit', String(filters.limit))
+    
+    setSearchParams(next, { replace: true })
+  }, [debouncedQ, filters, setSearchParams])
 
-  useEffect(() => {
-    if (desiredParams.toString() === searchParams.toString()) return
-    setSearchParams(desiredParams, { replace: true })
-  }, [desiredParams, searchParams, setSearchParams])
-
-  useEffect(() => {
-    let canceled = false
+  const loadLeads = useCallback(async () => {
     setLoading(true)
     setError('')
-    leadsApi
-      .list({
-        ...(debouncedQ.trim() ? { q: debouncedQ.trim() } : null),
-        ...(status.trim() ? { status: status.trim() } : null),
-        ...(source.trim() ? { source: source.trim() } : null),
-        page,
-        limit,
+    try {
+      const res = await leadsApi.list({
+        ...filters,
+        q: debouncedQ
       })
-      .then((res) => {
-        if (canceled) return
-        setItems(res.items || [])
-        setTotal(Number(res.total) || 0)
-      })
-      .catch((e) => {
-        if (canceled) return
-        setError(e.message || 'Failed to load leads')
-      })
-      .finally(() => {
-        if (canceled) return
-        setLoading(false)
-      })
-
-    return () => {
-      canceled = true
+      setItems(res.items || [])
+      setTotal(res.total || 0)
+    } catch (err) {
+      setError('Failed to load leads')
+    } finally {
+      setLoading(false)
     }
-  }, [debouncedQ, status, source, page, limit])
+  }, [debouncedQ, filters])
+
+  useEffect(() => {
+    loadLeads()
+  }, [loadLeads])
+
+  const { user } = useAuth()
+
+  async function handleAssign(id) {
+    try {
+      await workflowApi.assignLead(id, user.id)
+      loadLeads()
+    } catch (err) {
+      setError('Assignment failed')
+    }
+  }
+
+  async function handleConvert(lead, type) {
+    try {
+      if (type === 'deal') {
+        await workflowApi.convertToDeal(lead.id, {
+          name: `Deal for ${lead.name}`,
+          value: 0
+        })
+      } else {
+        await workflowApi.convertToCustomer(lead.id, 'lead', {
+          name: lead.name,
+          email: lead.email,
+          phone: lead.phone
+        })
+      }
+      loadLeads()
+    } catch (err) {
+      setError('Conversion failed')
+    }
+  }
+
+  const handleFilterChange = (newFilters) => {
+    setFilters(prev => ({ ...prev, ...newFilters, page: 1 }))
+  }
 
   async function onDelete(id) {
-    if (!confirm('Delete this lead?')) return
-    await leadsApi.remove(id)
-    setItems((prev) => prev.filter((x) => x.id !== id))
-    setTotal((t) => Math.max(0, (Number(t) || 0) - 1))
+    if (!confirm('Delete lead?')) return
+    try {
+      await leadsApi.remove(id)
+      loadLeads()
+    } catch (err) {
+      setError('Delete failed')
+    }
   }
 
   return (
     <div className="stack">
-      <div className="row">
-        <h1>Leads</h1>
-        <Link className="btn primary" to="/leads/new">
-          + New
-        </Link>
+      <PageHeader
+        title="Leads"
+        backTo="/"
+        actions={<Link className="btn primary" to="/leads/new">+ New Lead</Link>}
+      />
+
+      <div className="card noPadding stack">
+        <div className="padding">
+           <input 
+             className="input" 
+             placeholder="Quick search name/email/phone..." 
+             value={filters.q}
+             onChange={(e) => handleFilterChange({ q: e.target.value })}
+           />
+        </div>
+
+        <FilterBar 
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          sortFields={[
+            { key: 'name', label: 'Name' },
+            { key: 'city', label: 'City' },
+            { key: 'created_at', label: 'Date Added' }
+          ]}
+          currentSort={{ field: filters.sortField, order: filters.sortOrder }}
+          options={{
+            status: [
+              { value: 'New', label: 'New' },
+              { value: 'Contacted', label: 'Contacted' },
+              { value: 'Quality Lead', label: 'Quality Lead' },
+              { value: 'Converted', label: 'Converted' },
+              { value: 'Dead', label: 'Dead' }
+            ],
+            source: [
+              { value: 'Website', label: 'Website' },
+              { value: 'Referral', label: 'Referral' },
+              { value: 'Social Media', label: 'Social Media' }
+            ]
+          }}
+        />
       </div>
 
-      <div className="filters">
-        <input
-          className="input"
-          value={q}
-          onChange={(e) => {
-            setQ(e.target.value)
-            setPage(1)
-          }}
-          placeholder="Search name/email/phone..."
-        />
-        <input
-          className="input"
-          value={status}
-          onChange={(e) => {
-            setStatus(e.target.value)
-            setPage(1)
-          }}
-          placeholder="status (optional)"
-        />
-        <input
-          className="input"
-          value={source}
-          onChange={(e) => {
-            setSource(e.target.value)
-            setPage(1)
-          }}
-          placeholder="source (optional)"
-        />
+      {error && <div className="alert error">{error}</div>}
+
+      <div className="tableWrap">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Status</th>
+              <th>Source</th>
+              <th>Contact</th>
+              <th className="right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((l) => (
+              <tr key={l.id}>
+                <td>
+                  <Link to={`/leads/${l.id}`} className="tableLink">
+                    {l.name}
+                  </Link>
+                </td>
+                <td><span className={`badge ${l.status.toLowerCase().replace(' ', '-')}`}>{l.status}</span></td>
+                <td>{l.source}</td>
+                <td>
+                  <div className="stack small-gap">
+                    <div className="small">{l.email}</div>
+                    <div className="muted small">{l.phone}</div>
+                  </div>
+                </td>
+                <td className="right">
+                  <div className="tableActions">
+                    {!l.assigned_to && (
+                      <button className="iconBtn highlight" onClick={() => handleAssign(l.id)} title="Assign to me">
+                        <Icon name="user" />
+                      </button>
+                    )}
+                    {l.status !== 'Converted' && (
+                      <button className="iconBtn success" onClick={() => handleConvert(l, 'deal')} title="Convert to Deal">
+                        <Icon name="deals" />
+                      </button>
+                    )}
+                    <Link className="iconBtn" to={`/leads/${l.id}/edit`} title="Edit">
+                      <Icon name="edit" />
+                    </Link>
+                    <button className="iconBtn text-danger" onClick={() => onDelete(l.id)} title="Delete">
+                      <Icon name="trash" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {!items.length && (
+              <tr>
+                <td colSpan="5" className="center muted padding30">No leads found matching your criteria.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
-      {error ? <div className="alert error">{error}</div> : null}
-
-      {loading ? (
-        <div className="muted">Loading...</div>
-      ) : (
-        <>
-          <div className="tableWrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Phone</th>
-                  <th>Status</th>
-                  <th>Source</th>
-                  <th className="right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.length ? (
-                  items.map((l) => (
-                    <tr key={l.id}>
-                      <td>
-                        <Link to={`/leads/${l.id}`} style={{ color: 'inherit' }}>
-                          {l.name || '-'}
-                        </Link>
-                      </td>
-                      <td>{l.email || '-'}</td>
-                      <td>{l.phone || '-'}</td>
-                      <td>{l.status || '-'}</td>
-                      <td>{l.source || '-'}</td>
-                      <td className="right">
-                        <Link className="btn" to={`/leads/${l.id}`}>
-                          View
-                        </Link>{' '}
-                        <Link className="btn" to={`/leads/${l.id}/edit`}>
-                          Edit
-                        </Link>{' '}
-                        <button className="btn danger" onClick={() => onDelete(l.id)} type="button">
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="6" className="muted">
-                      No leads found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <Pagination
-            page={page}
-            limit={limit}
-            total={total}
-            onPageChange={(p) => setPage(Math.max(1, p))}
-            onLimitChange={(l) => {
-              setLimit(l)
-              setPage(1)
-            }}
-          />
-        </>
-      )}
+      <Pagination 
+        page={filters.page} 
+        limit={filters.limit} 
+        total={total} 
+        onPageChange={(p) => setFilters(prev => ({ ...prev, page: p }))} 
+        onLimitChange={(l) => setFilters(prev => ({ ...prev, limit: l, page: 1 }))}
+      />
     </div>
   )
 }
-

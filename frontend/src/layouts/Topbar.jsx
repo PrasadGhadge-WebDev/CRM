@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Icon } from "./icons.jsx"
 import { useAuth } from "../context/AuthContext"
 import { useNavigate } from "react-router-dom"
+import NotificationDropdown from "../components/NotificationDropdown.jsx"
 
 export default function Topbar({
   title,
@@ -30,18 +31,9 @@ export default function Topbar({
 
       {/* LEFT */}
       <div className="topbarLeft">
-        <button
-          className={`iconBtn topbarMenuBtn ${sidebarOpen ? "active" : ""}`}
-          type="button"
-          onClick={onToggleSidebar}
-          aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
-          aria-expanded={sidebarOpen}
-        >
-          <span className="topbarMenuIcon" aria-hidden="true">
-            <Icon name={sidebarOpen ? "close" : "menu"} />
-          </span>
+        <button className="iconBtn sidebarToggle" onClick={onToggleSidebar}>
+          <Icon name="menu" />
         </button>
-
         <h2 className="topbarTitle">{title}</h2>
       </div>
 
@@ -59,9 +51,7 @@ export default function Topbar({
       {/* RIGHT */}
       <div className="topbarRight">
 
-        <button className="iconBtn">
-          <Icon name="bell" />
-        </button>
+        <NotificationDropdown />
 
         <button className="iconBtn" onClick={onToggleTheme}>
           <Icon name={theme === "dark" ? "sun" : "moon"} />
@@ -129,3 +119,4 @@ export default function Topbar({
     </header>
   )
 }
+

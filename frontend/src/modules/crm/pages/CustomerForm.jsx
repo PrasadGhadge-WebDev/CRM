@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
+import PageHeader from '../../../components/PageHeader.jsx'
 import { customersApi } from '../../../services/customers.js'
+import { masterDataApi } from '../../../services/masterData.js'
 
 const emptyCustomer = {
   company_id: '',
@@ -26,8 +28,13 @@ export default function CustomerForm({ mode }) {
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [types, setTypes] = useState([])
 
   const title = useMemo(() => (isEdit ? 'Edit Customer' : 'New Customer'), [isEdit])
+
+  useEffect(() => {
+    masterDataApi.list('customer-type').then(res => setTypes(res.items || []))
+  }, [])
 
   useEffect(() => {
     if (!isEdit) return
@@ -74,12 +81,7 @@ export default function CustomerForm({ mode }) {
 
   return (
     <div className="stack">
-      <div className="row">
-        <h1>{title}</h1>
-        <Link className="btn" to="/customers">
-          Back
-        </Link>
-      </div>
+      <PageHeader title={title} backTo="/customers" />
 
       {error ? <div className="alert error">{error}</div> : null}
       {loading ? (
@@ -93,7 +95,14 @@ export default function CustomerForm({ mode }) {
             </div>
             <div className="field">
               <label>Customer Type</label>
-              <input className="input" value={model.customer_type} onChange={onChange('customer_type')} />
+              <select className="input" value={model.customer_type} onChange={onChange('customer_type')}>
+                <option value="">Select type...</option>
+                {types.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="field">

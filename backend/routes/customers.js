@@ -1,8 +1,11 @@
 const express = require('express');
 const controller = require('../controllers/customersController');
 const { validateObjectId } = require('../middleware/validateObjectId');
+const { protect } = require('../middleware/auth');
 
 const router = express.Router();
+
+router.use(protect);
 
 router.get('/export', controller.exportCustomersCsv);
 router.post('/import', controller.importCustomersCsv);

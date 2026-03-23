@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useCallback, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { Icon } from '../../../layouts/icons.jsx'
 import Pagination from '../../../components/Pagination.jsx'
+import FilterBar from '../../../components/FilterBar.jsx'
+import PageHeader from '../../../components/PageHeader.jsx'
 import { customersApi } from '../../../services/customers.js'
 import { useDebouncedValue } from '../../../utils/useDebouncedValue.js'
 
@@ -8,81 +11,75 @@ export default function CustomersList() {
   const fileInputRef = useRef(null)
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const qParam = searchParams.get('q') || ''
-  const companyIdParam = searchParams.get('companyId') || ''
-  const pageParam = Math.max(1, Number(searchParams.get('page') || 1) || 1)
-  const limitParam = Math.min(100, Math.max(1, Number(searchParams.get('limit') || 20) || 20))
-
   const [items, setItems] = useState([])
-  const [q, setQ] = useState(qParam)
-  const [companyId, setCompanyId] = useState(companyIdParam)
-  const [page, setPage] = useState(pageParam)
-  const [limit, setLimit] = useState(limitParam)
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const debouncedQ = useDebouncedValue(q, 250)
+  // Filter & Sort State
+  const [filters, setFilters] = useState({
+    q: searchParams.get('q') || '',
+    companyId: searchParams.get('companyId') || '',
+    customer_type: searchParams.get('customer_type') || '',
+    sortField: searchParams.get('sortField') || 'created_at',
+    sortOrder: searchParams.get('sortOrder') || 'desc',
+    page: Math.max(1, Number(searchParams.get('page')) || 1),
+    limit: Math.min(100, Math.max(1, Number(searchParams.get('limit')) || 20)),
+  })
 
-  useEffect(() => setQ(qParam), [qParam])
-  useEffect(() => setCompanyId(companyIdParam), [companyIdParam])
-  useEffect(() => setPage(pageParam), [pageParam])
-  useEffect(() => setLimit(limitParam), [limitParam])
+  const debouncedQ = useDebouncedValue(filters.q, 300)
 
-  const desiredParams = useMemo(() => {
+  useEffect(() => {
     const next = new URLSearchParams()
-    const trimmed = debouncedQ.trim()
-    if (trimmed) next.set('q', trimmed)
-    if (companyId.trim()) next.set('companyId', companyId.trim())
-    if (page > 1) next.set('page', String(page))
-    if (limit !== 20) next.set('limit', String(limit))
-    return next
-  }, [debouncedQ, companyId, page, limit])
+    if (debouncedQ.trim()) next.set('q', debouncedQ.trim())
+    if (filters.companyId) next.set('companyId', filters.companyId)
+    if (filters.customer_type) next.set('customer_type', filters.customer_type)
+    if (filters.sortField !== 'created_at') next.set('sortField', filters.sortField)
+    if (filters.sortOrder !== 'desc') next.set('sortOrder', filters.sortOrder)
+    if (filters.page > 1) next.set('page', String(filters.page))
+    if (filters.limit !== 20) next.set('limit', String(filters.limit))
+    
+    setSearchParams(next, { replace: true })
+  }, [debouncedQ, filters, setSearchParams])
 
-  useEffect(() => {
-    if (desiredParams.toString() === searchParams.toString()) return
-    setSearchParams(desiredParams, { replace: true })
-  }, [desiredParams, searchParams, setSearchParams])
-
-  useEffect(() => {
-    let canceled = false
+  const loadCustomers = useCallback(async () => {
     setLoading(true)
     setError('')
-    customersApi
-      .list({
-        ...(debouncedQ.trim() ? { q: debouncedQ.trim() } : null),
-        ...(companyId.trim() ? { companyId: companyId.trim() } : null),
-        page,
-        limit,
+    try {
+      const res = await customersApi.list({
+        ...filters,
+        q: debouncedQ
       })
-      .then((res) => {
-        if (canceled) return
-        setItems(res.items || [])
-        setTotal(Number(res.total) || 0)
-      })
-      .catch((e) => {
-        if (canceled) return
-        setError(e.message || 'Failed to load customers')
-      })
-      .finally(() => {
-        if (canceled) return
-        setLoading(false)
-      })
-
-    return () => {
-      canceled = true
+      setItems(res.items || [])
+      setTotal(res.total || 0)
+    } catch (err) {
+      setError('Failed to load customers')
+    } finally {
+      setLoading(false)
     }
-  }, [debouncedQ, companyId, page, limit])
+  }, [debouncedQ, filters])
 
-  async function onDelete(id) {
-    if (!confirm('Delete this customer?')) return
-    await customersApi.remove(id)
-    setItems((prev) => prev.filter((x) => x.id !== id))
-    setTotal((t) => Math.max(0, (Number(t) || 0) - 1))
+  useEffect(() => {
+    loadCustomers()
+  }, [loadCustomers])
+
+  const handleFilterChange = (newFilters) => {
+    setFilters(prev => ({ ...prev, ...newFilters, page: 1 }))
   }
 
+  async function onDelete(id) {
+    if (!confirm('Delete customer?')) return
+    try {
+      await customersApi.remove(id)
+      loadCustomers()
+    } catch (err) {
+      setError('Delete failed')
+    }
+  }
+
+  // CSV stuff...
   function downloadBlob(blob, filename) {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -100,46 +97,32 @@ export default function CustomersList() {
     setNotice('')
     try {
       const blob = await customersApi.exportCsv({
-        ...(debouncedQ.trim() ? { q: debouncedQ.trim() } : null),
-        ...(companyId.trim() ? { companyId: companyId.trim() } : null),
+        q: debouncedQ,
+        companyId: filters.companyId,
         ...(template ? { template: true } : null),
       })
-      const date = new Date().toISOString().slice(0, 10)
-      const filename = template ? `customers-template-${date}.csv` : `customers-${date}.csv`
+      const filename = template ? `customers-template.csv` : `customers-export.csv`
       downloadBlob(blob, filename)
-      setNotice(template ? 'Template downloaded.' : 'Export downloaded.')
+      setNotice(template ? 'Template downloaded.' : 'Export completed.')
     } catch (e) {
-      setError(e.message || 'Failed to export CSV')
+      setError('Export failed')
     } finally {
       setBusy(false)
     }
-  }
-
-  async function onPickImportFile() {
-    setError('')
-    setNotice('')
-    fileInputRef.current?.click()
   }
 
   async function onImportFileSelected(e) {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
-
     setBusy(true)
-    setError('')
-    setNotice('')
-
     try {
       const csv = await file.text()
-      const res = await customersApi.importCsv({ csv, companyId: companyId.trim() || undefined })
-      const errorsCount = Array.isArray(res.errors) ? res.errors.length : 0
-      setNotice(
-        `Imported ${res.created || 0} customers. Skipped ${res.skipped || 0} rows.` +
-          (errorsCount ? ` ${errorsCount} rows failed.` : ''),
-      )
+      const res = await customersApi.importCsv({ csv, companyId: filters.companyId })
+      setNotice(`Imported ${res.created} customers.`)
+      loadCustomers()
     } catch (err) {
-      setError(err.message || 'Failed to import CSV')
+      setError('Import failed')
     } finally {
       setBusy(false)
     }
@@ -147,111 +130,109 @@ export default function CustomersList() {
 
   return (
     <div className="stack">
-      <div className="row">
-        <h1>Customers</h1>
-        <div className="row" style={{ gap: 8 }}>
-          <button className="btn" type="button" onClick={() => onExport(true)} disabled={busy}>
-            Template CSV
-          </button>
-          <button className="btn" type="button" onClick={() => onExport(false)} disabled={busy}>
-            Export CSV
-          </button>
-          <button className="btn" type="button" onClick={onPickImportFile} disabled={busy}>
-            Import CSV
-          </button>
-          <Link className="btn primary" to="/customers/new">
-            + New
-          </Link>
-        </div>
-      </div>
-
-      <div className="filters">
-        <input
-          className="input"
-          value={q}
-          onChange={(e) => {
-            setQ(e.target.value)
-            setPage(1)
-          }}
-          placeholder="Search name/email/phone..."
-        />
-        <input
-          className="input"
-          value={companyId}
-          onChange={(e) => {
-            setCompanyId(e.target.value)
-            setPage(1)
-          }}
-          placeholder="companyId (optional)"
-        />
-        <div />
-      </div>
-
-      {error ? <div className="alert error">{error}</div> : null}
-      {notice ? <div className="alert">{notice}</div> : null}
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".csv,text/csv"
-        style={{ display: 'none' }}
-        onChange={onImportFileSelected}
+      <PageHeader
+        title="Customers"
+        backTo="/"
+        actions={
+          <div className="row small-gap">
+          <button className="btn small" onClick={() => onExport(true)} disabled={busy}>Template</button>
+          <button className="btn small" onClick={() => onExport(false)} disabled={busy}>Export</button>
+          <button className="btn small" onClick={() => fileInputRef.current?.click()} disabled={busy}>Import</button>
+          <Link className="btn primary small" to="/customers/new">+ New</Link>
+          </div>
+        }
       />
 
+      <div className="card noPadding stack">
+        <div className="padding">
+           <input 
+             className="input" 
+             placeholder="Search name/email/phone..." 
+             value={filters.q}
+             onChange={(e) => handleFilterChange({ q: e.target.value })}
+           />
+        </div>
+
+        <FilterBar 
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          sortFields={[
+            { key: 'name', label: 'Name' },
+            { key: 'created_at', label: 'Date Added' },
+            { key: 'city', label: 'City' }
+          ]}
+          currentSort={{ field: filters.sortField, order: filters.sortOrder }}
+          options={{
+            customer_type: [
+              { value: 'Corporate', label: 'Corporate' },
+              { value: 'Individual', label: 'Individual' },
+              { value: 'Retail', label: 'Retail' }
+            ]
+          }}
+        />
+      </div>
+
+      {error && <div className="alert error">{error}</div>}
+      {notice && <div className="alert">{notice}</div>}
+
+      <input ref={fileInputRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={onImportFileSelected} />
+
       {loading ? (
-        <div className="muted">Loading...</div>
+        <div className="muted padding30 center">Loading customers...</div>
       ) : (
         <>
 
-          <div className="tableWrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Phone</th>
-                  <th>Type</th>
-                  <th className="right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.length ? (
-                  items.map((c) => (
-                    <tr key={c.id}>
-                      <td>{c.name}</td>
-                      <td>{c.email || '-'}</td>
-                      <td>{c.phone || '-'}</td>
-                      <td>{c.customer_type || '-'}</td>
-                      <td className="right">
-                        <Link className="btn" to={`/customers/${c.id}`}>
-                          Edit
-                        </Link>{' '}
-                        <button className="btn danger" onClick={() => onDelete(c.id)} type="button">
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="5" className="muted">
-                      No customers found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-           <Pagination
-            page={page}
-            limit={limit}
-            total={total}
-            onPageChange={(p) => setPage(Math.max(1, p))}
-            onLimitChange={(l) => {
-              setLimit(l)
-              setPage(1)
-            }}
-          />
+      <div className="tableWrap">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Contact Info</th>
+              <th>Type</th>
+              <th>Location</th>
+              <th className="right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((c) => (
+              <tr key={c.id}>
+                <td>
+                  <Link to={`/customers/${c.id}`} className="tableLink">{c.name}</Link>
+                </td>
+                <td>
+                   <div className="stack small-gap">
+                     <div className="small">{c.email}</div>
+                     <div className="muted small">{c.phone}</div>
+                   </div>
+                </td>
+                <td><span className="badge secondary">{c.customer_type}</span></td>
+                <td><div className="small">{c.city}{c.city && c.country ? ', ' : ''}{c.country}</div></td>
+                <td className="right">
+                  <div className="tableActions">
+                    <Link className="iconBtn" to={`/customers/${c.id}`} title="Edit">
+                      <Icon name="edit" />
+                    </Link>
+                    <button className="iconBtn text-danger" onClick={() => onDelete(c.id)} title="Delete">
+                      <Icon name="trash" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {!items.length && (
+              <tr><td colSpan="5" className="center muted padding30">No customers found.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <Pagination 
+        page={filters.page} 
+        limit={filters.limit} 
+        total={total} 
+        onPageChange={(p) => setFilters(prev => ({ ...prev, page: p }))} 
+        onLimitChange={(l) => setFilters(prev => ({ ...prev, limit: l, page: 1 }))}
+      />
         </>
       )}
     </div>

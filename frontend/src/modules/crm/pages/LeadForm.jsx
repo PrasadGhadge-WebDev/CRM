@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
+import PageHeader from '../../../components/PageHeader.jsx'
 import { leadsApi } from '../../../services/leads.js'
+import { masterDataApi } from '../../../services/masterData.js'
 
 const emptyLead = {
   company_id: '',
@@ -22,8 +24,20 @@ export default function LeadForm({ mode }) {
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [statuses, setStatuses] = useState([])
+  const [sources, setSources] = useState([])
 
   const title = useMemo(() => (isEdit ? 'Edit Lead' : 'New Lead'), [isEdit])
+
+  useEffect(() => {
+    Promise.all([
+      masterDataApi.list('lead-status'),
+      masterDataApi.list('lead-source'),
+    ]).then(([statusRes, sourceRes]) => {
+      setStatuses(statusRes.items || [])
+      setSources(sourceRes.items || [])
+    })
+  }, [])
 
   useEffect(() => {
     if (!isEdit) return
@@ -77,12 +91,7 @@ export default function LeadForm({ mode }) {
 
   return (
     <div className="stack">
-      <div className="row">
-        <h1>{title}</h1>
-        <Link className="btn" to="/leads">
-          Back
-        </Link>
-      </div>
+      <PageHeader title={title} backTo="/leads" />
 
       {error ? <div className="alert error">{error}</div> : null}
       {loading ? (
@@ -105,7 +114,17 @@ export default function LeadForm({ mode }) {
             </div>
             <div className="field">
               <label>Status</label>
-              <input className="input" value={model.status} onChange={onChange('status')} />
+              <select className="input" value={model.status} onChange={onChange('status')}>
+                {statuses.length ? (
+                  statuses.map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))
+                ) : (
+                  <option value="new">New</option>
+                )}
+              </select>
             </div>
 
             <div className="field">
@@ -119,7 +138,14 @@ export default function LeadForm({ mode }) {
 
             <div className="field">
               <label>Source</label>
-              <input className="input" value={model.source} onChange={onChange('source')} />
+              <select className="input" value={model.source} onChange={onChange('source')}>
+                <option value="">Select source...</option>
+                {sources.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="field">
               <label>Notes</label>

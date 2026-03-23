@@ -1,5 +1,6 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { api } from '../services/api'
+import { authApi } from '../services/auth'
 
 const AuthContext = createContext()
 
@@ -9,6 +10,13 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider')
   }
   return context
+}
+
+function storeSession(user, token) {
+  localStorage.setItem('user', JSON.stringify(user))
+  if (token) {
+    localStorage.setItem('token', token)
+  }
 }
 
 export const AuthProvider = ({ children }) => {
@@ -25,44 +33,62 @@ export const AuthProvider = ({ children }) => {
     setLoading(false)
   }, [])
 
-  const login = async (email, password) => {
+  const login = useCallback(async (email, password) => {
     try {
       const response = await api.post('/api/auth/login', { email, password })
-      const { user, token } = response.data
-      
-      localStorage.setItem('user', JSON.stringify(user))
-      localStorage.setItem('token', token)
-      setUser(user)
-      
+      const { user: nextUser, token } = response
+
+      storeSession(nextUser, token)
+      setUser(nextUser)
+
       return { success: true }
     } catch (error) {
-      return { success: false, message: error.message }
+      return { success: false, message: error?.response?.data?.message || error.message }
     }
-  }
+  }, [])
 
-  const register = async (username, email, password) => {
+  const register = useCallback(async (username, email, password) => {
     try {
       const response = await api.post('/api/auth/register', { username, email, password })
-      const { user, token } = response.data
-      
-      localStorage.setItem('user', JSON.stringify(user))
-      localStorage.setItem('token', token)
-      setUser(user)
-      
+      const { user: nextUser, token } = response
+
+      storeSession(nextUser, token)
+      setUser(nextUser)
+
       return { success: true }
     } catch (error) {
-      return { success: false, message: error.message }
+      return { success: false, message: error?.response?.data?.message || error.message }
     }
-  }
+  }, [])
 
-  const logout = () => {
-    localStorage.removeItem('user')
-    localStorage.removeItem('token')
-    setUser(null)
-  }
+  const refreshUser = useCallback(async () => {
+    const nextUser = await authApi.me()
+    storeSession(nextUser)
+    setUser(nextUser)
+    return nextUser
+  }, [])
+
+  const updateUser = useCallback((nextUser) => {
+    storeSession(nextUser)
+    setUser(nextUser)
+  }, [])
+
+  const logout = useCallback(async () => {
+    try {
+      await api.get('/api/auth/logout')
+    } catch (error) {
+      console.error('Logout error:', error)
+    } finally {
+      localStorage.removeItem('user')
+      localStorage.removeItem('token')
+      setUser(null)
+    }
+  }, [])
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{ user, loading, login, register, logout, refreshUser, updateUser }}
+    >
       {children}
     </AuthContext.Provider>
   )

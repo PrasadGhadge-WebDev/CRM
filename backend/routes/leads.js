@@ -1,8 +1,11 @@
 const express = require('express');
 const controller = require('../controllers/leadsController');
 const { validateObjectId } = require('../middleware/validateObjectId');
+const { protect } = require('../middleware/auth');
 
 const router = express.Router();
+
+router.use(protect);
 
 router.get('/', controller.listLeads);
 router.post('/', controller.createLead);

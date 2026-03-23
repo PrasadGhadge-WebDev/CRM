@@ -2,138 +2,59 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 24px;
-  background: var(--bg);
+  padding: 0 32px;
+  background: var(--topbar-bg);
+  backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
-  height: 70px;
-  z-index: 50;
-  gap: 20px;
+  height: 64px;
+  z-index: 30;
   position: sticky;
   top: 0;
-  backdrop-filter: blur(12px);
-}
-
-body.dark .crmTopbar {
-  background: var(--topbar-bg);
+  color: var(--text);
 }
 
 .topbarLeft {
   display: flex;
   align-items: center;
   gap: 16px;
-  flex-shrink: 0;
-  min-width: 0;
 }
 
 .topbarTitle {
-  font-size: 1.125rem;
-  font-weight: 600;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--text);
   margin: 0;
-  white-space: nowrap;
-}
-
-.iconBtn {
-  background: var(--surface-1);
-  border: 1px solid var(--control-border);
-  padding: 8px;
-  border-radius: 12px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text);
-  transition: all 0.2s;
-  width: 40px;
-  height: 40px;
-}
-
-.iconBtn:hover {
-  background: var(--surface-2);
-  transform: translateY(-1px);
-}
-
-.topbarMenuBtn {
-  position: relative;
-  overflow: hidden;
-  transition:
-    background 0.28s ease,
-    border-color 0.28s ease,
-    color 0.28s ease,
-    transform 0.28s ease,
-    box-shadow 0.28s ease;
-}
-
-.topbarMenuBtn::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(135deg, var(--primary-2), transparent 70%);
-  opacity: 0;
-  transition: opacity 0.28s ease;
-  pointer-events: none;
-}
-
-.topbarMenuIcon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transform: rotate(0deg) scale(1);
-  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
-  position: relative;
-  z-index: 1;
-}
-
-.topbarMenuBtn.active {
-  background: var(--primary-soft);
-  border-color: var(--primary-2);
-  color: var(--primary);
-  box-shadow: 0 10px 24px -16px var(--primary);
-}
-
-.topbarMenuBtn.active::after {
-  opacity: 1;
-}
-
-.topbarMenuBtn.active .topbarMenuIcon {
-  transform: rotate(90deg) scale(1.05);
-}
-
-.topbarMenuBtn:hover .topbarMenuIcon {
-  transform: rotate(8deg) scale(1.04);
-}
-
-.topbarMenuBtn.active:hover .topbarMenuIcon {
-  transform: rotate(90deg) scale(1.08);
-}
-
-.iconBtn:focus-visible,
-.profileTrigger:focus-visible,
-.dropdownItem:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
+  text-transform: capitalize;
 }
 
 .topbarSearch {
   flex: 1;
-  max-width: 600px;
-  min-width: 220px;
+  max-width: 480px;
+  margin: 0 40px;
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: var(--control-bg);
-  padding: 8px 16px;
-  border-radius: 999px;
-  border: 1px solid var(--control-border);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0 16px;
+  height: 40px;
   transition: all 0.2s;
   color: var(--muted);
 }
 
 .topbarSearch:focus-within {
-  background: var(--bg);
+  background: var(--control-bg);
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-2);
+  box-shadow: 0 0 0 4px var(--primary-soft);
+  color: var(--text);
+}
+
+.topbarSearch svg {
+  width: 16px;
+  height: 16px;
+  opacity: 0.6;
 }
 
 .topbarSearch input {
@@ -141,168 +62,138 @@ body.dark .crmTopbar {
   border: none;
   outline: none;
   width: 100%;
-  font-size: 14px;
-  color: var(--text);
-}
-
-.topbarSearch input::placeholder {
-  color: var(--muted);
+  padding: 0 12px;
+  font-size: 0.9rem;
+  color: inherit;
+  font-weight: 500;
 }
 
 .topbarRight {
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
+  gap: 16px;
+}
+
+.iconBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.iconBtn:hover {
+  background: var(--surface-1);
+  color: var(--text);
+}
+
+.sidebarToggle {
+  margin-right: 8px;
+  color: var(--text);
 }
 
 .profileMenu {
   position: relative;
-  margin-left: 8px;
-}
-
-@media (min-width: 981px) {
-  .topbarLeft > .iconBtn {
-    display: none;
-  }
 }
 
 .profileTrigger {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  padding: 6px 12px;
+  border-radius: var(--radius-lg);
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 12px;
   transition: all 0.2s;
-  user-select: none;
   background: var(--surface-1);
   border: 1px solid var(--border);
 }
 
 .profileTrigger:hover {
-  background: var(--surface-2);
+  background: var(--surface-3);
+  border-color: var(--muted);
+}
+
+.profileTrigger .avatar {
+  width: 28px;
+  height: 28px;
+  background: var(--primary);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 11px;
 }
 
 .profileText {
   display: flex;
   flex-direction: column;
-  line-height: 1.2;
 }
 
 .profileName {
-  font-size: 14px;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--text);
+  line-height: 1.2;
 }
 
 .profileRole {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--muted);
-}
-
-.avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: var(--primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: 600;
-  font-size: 14px;
-  box-shadow: 0 4px 12px var(--primary-2);
 }
 
 .profileDropdown {
   position: absolute;
+  top: calc(100% + 8px);
   right: 0;
-  top: 56px;
   width: 220px;
-  background: var(--panel);
-  border-radius: 16px;
-  box-shadow: var(--shadow);
-  padding: 8px;
-  z-index: 100;
+  background: var(--sidebar-bg);
   border: 1px solid var(--border);
-  animation: topbarDropdownIn 0.2s ease-out;
+  border-radius: var(--radius-lg);
+  padding: 8px;
+  box-shadow: var(--shadow);
+  z-index: 50;
 }
 
 .dropdownItem {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   padding: 10px 12px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: 14px;
-  color: var(--text);
-  border-radius: 8px;
+  font-size: 0.9rem;
+  color: var(--muted);
   transition: all 0.2s;
-  opacity: 0.85;
 }
 
 .dropdownItem:hover {
   background: var(--surface-1);
-  opacity: 1;
-  color: var(--primary);
+  color: var(--text);
+}
+
+.dropdownItem.logout {
+  color: #ef4444;
 }
 
 .dropdownDivider {
   height: 1px;
   background: var(--border);
-  margin: 6px 4px;
-}
-
-.logout {
-  color: #ef4444 !important;
-}
-
-.logout:hover {
-  background: var(--danger) !important;
-}
-
-@keyframes topbarDropdownIn {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  margin: 8px 4px;
 }
 
 @media (max-width: 980px) {
-  .crmTopbar {
-    padding: 12px 16px;
-  }
-
   .topbarSearch {
-    min-width: 0;
-  }
-
-  .profileText {
     display: none;
   }
-}
-
-@media (max-width: 760px) {
-  .crmTopbar {
-    height: auto;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-
-  .topbarSearch {
-    order: 3;
-    width: 100%;
-    max-width: none;
-    min-width: 0;
-  }
-
-  .topbarRight {
-    margin-left: auto;
+  .profileText {
+    display: none;
   }
 }

@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { leadsApi } from '../../../services/leads.js'
+import { workflowApi } from '../../../services/workflow.js'
+import { useAuth } from '../../../context/AuthContext'
+import Timeline from '../../../components/Timeline.jsx'
+import AttachmentManager from '../../../components/AttachmentManager.jsx'
+import PageHeader from '../../../components/PageHeader.jsx'
 
 export default function LeadDetail() {
   const { id } = useParams()
   const [lead, setLead] = useState(null)
-  const [notes, setNotes] = useState([])
-  const [noteText, setNoteText] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -14,11 +17,10 @@ export default function LeadDetail() {
     let canceled = false
     setLoading(true)
     setError('')
-    Promise.all([leadsApi.get(id), leadsApi.listNotes(id)])
-      .then(([l, n]) => {
+    leadsApi.get(id)
+      .then((l) => {
         if (canceled) return
         setLead(l)
-        setNotes(n.items || [])
       })
       .catch((e) => {
         if (canceled) return
@@ -33,19 +35,26 @@ export default function LeadDetail() {
     }
   }, [id])
 
-  async function addNote(e) {
-    e.preventDefault()
-    const note = noteText.trim()
-    if (!note) return
-    const created = await leadsApi.addNote(id, { note })
-    setNotes((prev) => [created, ...prev])
-    setNoteText('')
+  const { user } = useAuth()
+
+  async function handleAssign() {
+    try {
+      const updated = await workflowApi.assignLead(id, user.id)
+      setLead(updated)
+    } catch (e) {
+      setError('Assignment failed')
+    }
   }
 
-  async function deleteNote(noteId) {
-    if (!confirm('Delete this note?')) return
-    await leadsApi.removeNote(id, noteId)
-    setNotes((prev) => prev.filter((n) => n.id !== noteId))
+  async function handleConvert() {
+    try {
+      await workflowApi.convertToDeal(id, { name: `Deal for ${lead.name}`, value: 0 })
+      // Refresh lead
+      const updated = await leadsApi.get(id)
+      setLead(updated)
+    } catch (e) {
+      setError('Conversion failed')
+    }
   }
 
   if (loading) return <div className="muted">Loading...</div>
@@ -54,17 +63,23 @@ export default function LeadDetail() {
 
   return (
     <div className="stack">
-      <div className="row">
-        <h1>{lead.name}</h1>
-        <div className="row">
-          <Link className="btn" to="/leads">
-            Back
-          </Link>
+      <PageHeader
+        title={lead.name}
+        backTo="/leads"
+        actions={
+          <div className="row small-gap">
+          {!lead.assigned_to && (
+            <button className="btn highlight" onClick={handleAssign}>Assign to Me</button>
+          )}
+          {lead.status !== 'converted' && (
+            <button className="btn success" onClick={handleConvert}>Convert to Deal</button>
+          )}
           <Link className="btn" to={`/leads/${lead.id}/edit`}>
             Edit
           </Link>
-        </div>
-      </div>
+          </div>
+        }
+      />
 
       <div className="card">
         <div className="grid2">
@@ -97,46 +112,10 @@ export default function LeadDetail() {
             </div>
           </div>
         </div>
-        {lead.notes ? (
-          <div className="kv">
-            <div className="k">Notes</div>
-            <div className="v">{lead.notes}</div>
-          </div>
-        ) : null}
       </div>
 
-      <div className="stack">
-        <h2>Lead Notes</h2>
-        <form className="row" onSubmit={addNote}>
-          <input
-            className="input"
-            value={noteText}
-            onChange={(e) => setNoteText(e.target.value)}
-            placeholder="Add a note..."
-          />
-          <button className="btn primary">Add</button>
-        </form>
-
-        {notes.length ? (
-          <div className="stack">
-            {notes.map((n) => (
-              <div className="note" key={n.id}>
-                <div className="noteText">{n.note}</div>
-                <div className="noteMeta">
-                  <span className="muted">
-                    {n.created_at ? new Date(n.created_at).toLocaleString() : ''}
-                  </span>
-                  <button className="btn danger" onClick={() => deleteNote(n.id)}>
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="muted">No notes yet.</div>
-        )}
-      </div>
+      <Timeline relatedId={id} relatedType="Lead" />
+      <AttachmentManager relatedId={id} relatedType="Lead" />
     </div>
   )
 }

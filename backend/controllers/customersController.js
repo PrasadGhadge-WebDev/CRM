@@ -10,10 +10,11 @@ function buildSearchQuery(q) {
 }
 
 exports.listCustomers = asyncHandler(async (req, res) => {
-  const { companyId, q, page = 1, limit = 20 } = req.query;
+  const { companyId, q, page = 1, limit = 20, sortField = 'created_at', sortOrder = 'desc' } = req.query;
 
   const pageNum = Math.max(1, Number(page) || 1);
   const limitNum = Math.min(100, Math.max(1, Number(limit) || 20));
+  const sort = { [sortField]: sortOrder === 'desc' ? -1 : 1 };
 
   const search = buildSearchQuery(q);
   const filter = {};
@@ -22,28 +23,27 @@ exports.listCustomers = asyncHandler(async (req, res) => {
 
   const [items, total] = await Promise.all([
     Customer.find(filter)
-      .sort({ created_at: -1 })
+      .sort(sort)
       .skip((pageNum - 1) * limitNum)
       .limit(limitNum),
     Customer.countDocuments(filter),
   ]);
 
-  res.json({ items, page: pageNum, limit: limitNum, total });
+  res.ok({ items, page: pageNum, limit: limitNum, total });
 });
 
 exports.createCustomer = asyncHandler(async (req, res) => {
   const payload = req.body || {};
   const created = await Customer.create(payload);
-  res.status(201).json(created);
+  res.created(created);
 });
 
 exports.getCustomer = asyncHandler(async (req, res) => {
   const customer = await Customer.findById(req.params.id);
   if (!customer) {
-    res.status(404);
-    throw new Error('Customer not found');
+    return res.fail('Customer not found', 404);
   }
-  res.json(customer);
+  res.ok(customer);
 });
 
 exports.updateCustomer = asyncHandler(async (req, res) => {
@@ -52,19 +52,17 @@ exports.updateCustomer = asyncHandler(async (req, res) => {
     runValidators: true,
   });
   if (!updated) {
-    res.status(404);
-    throw new Error('Customer not found');
+    return res.fail('Customer not found', 404);
   }
-  res.json(updated);
+  res.ok(updated);
 });
 
 exports.deleteCustomer = asyncHandler(async (req, res) => {
   const deleted = await Customer.findByIdAndDelete(req.params.id);
   if (!deleted) {
-    res.status(404);
-    throw new Error('Customer not found');
+    return res.fail('Customer not found', 404);
   }
-  res.json({ ok: true });
+  res.ok(null, 'Customer deleted');
 });
 
 const CSV_HEADERS = [
@@ -167,10 +165,9 @@ exports.importCustomersCsv = asyncHandler(async (req, res) => {
     }
   }
 
-  res.status(201).json({
-    ok: true,
+  res.created({
     created: created.length,
     skipped,
     errors,
-  });
+  }, `Imported ${created.length} customers`);
 });

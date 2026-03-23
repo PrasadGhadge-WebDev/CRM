@@ -1,0 +1,19 @@
+const mongoose = require('mongoose');
+const { withIdTransform } = require('../utils/mongooseTransforms');
+
+const NotificationSchema = new mongoose.Schema(
+  {
+    user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    title: { type: String, required: true, trim: true },
+    message: { type: String, required: true, trim: true },
+    type: { type: String, enum: ['info', 'success', 'warning', 'error'], default: 'info' },
+    is_read: { type: Boolean, default: false, index: true },
+    linked_entity_id: { type: mongoose.Schema.Types.ObjectId },
+    linked_entity_type: { type: String, enum: ['Lead', 'Customer', 'Deal', 'Activity'] },
+  },
+  { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
+);
+
+withIdTransform(NotificationSchema);
+
+module.exports = mongoose.model('Notification', NotificationSchema);

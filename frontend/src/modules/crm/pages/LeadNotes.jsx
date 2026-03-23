@@ -1,12 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
+import Pagination from '../../../components/Pagination.jsx'
+import PageHeader from '../../../components/PageHeader.jsx'
 import { leadsApi } from '../../../services/leads.js'
-
 export default function LeadNotes() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const pageParam = Math.max(1, Number(searchParams.get('page')) || 1)
+
   const [leads, setLeads] = useState([])
   const [leadId, setLeadId] = useState('')
   const [notes, setNotes] = useState([])
   const [noteText, setNoteText] = useState('')
+  const [page, setPage] = useState(pageParam)
+  const [total, setTotal] = useState(0)
+  const [limit, setLimit] = useState(Number(searchParams.get('limit')) || 20)
   const [loadingLeads, setLoadingLeads] = useState(true)
   const [loadingNotes, setLoadingNotes] = useState(false)
   const [error, setError] = useState('')
@@ -44,10 +51,11 @@ export default function LeadNotes() {
     setLoadingNotes(true)
     setError('')
     leadsApi
-      .listNotes(leadId)
+      .listNotes(leadId, { page, limit })
       .then((res) => {
         if (canceled) return
         setNotes(res.items || [])
+        setTotal(res.total || 0)
       })
       .catch((e) => {
         if (canceled) return
@@ -60,7 +68,16 @@ export default function LeadNotes() {
     return () => {
       canceled = true
     }
-  }, [leadId])
+  }, [leadId, page, limit])
+
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams)
+    if (page > 1) next.set('page', String(page))
+    else next.delete('page')
+    if (limit !== 20) next.set('limit', String(limit))
+    else next.delete('limit')
+    setSearchParams(next, { replace: true })
+  }, [page, limit, setSearchParams])
 
   async function addNote(e) {
     e.preventDefault()
@@ -90,14 +107,17 @@ export default function LeadNotes() {
 
   return (
     <div className="stack">
-      <div className="row">
-        <h1>Lead Notes</h1>
-        {leadId ? (
-          <Link className="btn" to={`/leads/${leadId}`}>
-            Open Lead
-          </Link>
-        ) : null}
-      </div>
+      <PageHeader
+        title="Lead Notes"
+        backTo="/leads"
+        actions={
+          leadId ? (
+            <Link className="btn" to={`/leads/${leadId}`}>
+              Open Lead
+            </Link>
+          ) : null
+        }
+      />
 
       {error ? <div className="alert error">{error}</div> : null}
 
@@ -143,11 +163,18 @@ export default function LeadNotes() {
               <div className="noteMeta">
                 <span className="muted">{n.created_at ? new Date(n.created_at).toLocaleString() : ''}</span>
                 <button className="btn danger" onClick={() => deleteNote(n.id)} type="button">
-                  Delete
+                   Delete
                 </button>
               </div>
             </div>
           ))}
+          <Pagination 
+            page={page} 
+            limit={limit} 
+            total={total} 
+            onPageChange={(p) => setPage(p)} 
+            onLimitChange={(l) => { setLimit(l); setPage(1); }}
+          />
         </div>
       ) : (
         <div className="muted">No notes yet.</div>

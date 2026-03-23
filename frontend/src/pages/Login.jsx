@@ -90,6 +90,8 @@ export default function Login() {
           <Link to="/register" className="auth-link">
             Sign up
           </Link>
+
+
         </div>
 
       </div>
