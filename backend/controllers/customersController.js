@@ -1,6 +1,7 @@
 const Customer = require('../models/Customer');
 const { asyncHandler } = require('../middleware/asyncHandler');
 const { parseCsv, rowsToObjects, toCsv } = require('../utils/csv');
+const { moveDocumentToTrash } = require('../utils/trash');
 
 function buildSearchQuery(q) {
   if (!q) return null;
@@ -10,7 +11,15 @@ function buildSearchQuery(q) {
 }
 
 exports.listCustomers = asyncHandler(async (req, res) => {
-  const { companyId, q, page = 1, limit = 20, sortField = 'created_at', sortOrder = 'desc' } = req.query;
+  const {
+    companyId,
+    customer_type,
+    q,
+    page = 1,
+    limit = 20,
+    sortField = 'created_at',
+    sortOrder = 'desc'
+  } = req.query;
 
   const pageNum = Math.max(1, Number(page) || 1);
   const limitNum = Math.min(100, Math.max(1, Number(limit) || 20));
@@ -19,6 +28,7 @@ exports.listCustomers = asyncHandler(async (req, res) => {
   const search = buildSearchQuery(q);
   const filter = {};
   if (companyId) filter.company_id = companyId;
+  if (customer_type) filter.customer_type = customer_type;
   if (search) filter.$or = [{ name: search }, { email: search }, { phone: search }];
 
   const [items, total] = await Promise.all([
@@ -58,11 +68,12 @@ exports.updateCustomer = asyncHandler(async (req, res) => {
 });
 
 exports.deleteCustomer = asyncHandler(async (req, res) => {
-  const deleted = await Customer.findByIdAndDelete(req.params.id);
-  if (!deleted) {
+  const customer = await Customer.findById(req.params.id);
+  if (!customer) {
     return res.fail('Customer not found', 404);
   }
-  res.ok(null, 'Customer deleted');
+  await moveDocumentToTrash({ entityType: 'customer', document: customer, deletedBy: req.user?.id });
+  res.ok(null, 'Customer moved to trash');
 });
 
 const CSV_HEADERS = [

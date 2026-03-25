@@ -1,6 +1,108 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { asyncHandler } = require('../middleware/asyncHandler');
+const { ensureDefaultAdmin, getDefaultAdminEmail } = require('../utils/defaultAdmin');
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_REGEX = /^[6-9]\d{9}$/;
+const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d).{6,}$/;
+const ALLOWED_ROLES = ['Admin', 'Manager', 'Accountant', 'Employee'];
+const REGISTERABLE_ROLES = ['Manager', 'Accountant', 'Employee'];
+const ROLE_ALIASES = {
+  admin: 'Admin',
+  manager: 'Manager',
+  accountant: 'Accountant',
+  employee: 'Employee',
+};
+
+function normalizeText(value) {
+  return String(value ?? '').trim();
+}
+
+function normalizeEmail(value) {
+  return normalizeText(value).toLowerCase();
+}
+
+function normalizeRole(value) {
+  const normalized = normalizeText(value).toLowerCase();
+  return ROLE_ALIASES[normalized] || '';
+}
+
+function validateRegisterPayload(body) {
+  const errors = [];
+  const username = normalizeText(body.username);
+  const name = normalizeText(body.name || body.fullName || body.username);
+  const email = normalizeEmail(body.email);
+  const phone = normalizeText(body.phone);
+  const password = String(body.password ?? '');
+  const role = normalizeRole(body.role);
+
+  if (!username) {
+    errors.push('Username is required');
+  } else if (username.length < 3) {
+    errors.push('Username must be at least 3 characters');
+  }
+
+  if (!name) {
+    errors.push('Full name is required');
+  } else if (name.length < 3) {
+    errors.push('Full name must be at least 3 characters');
+  }
+
+  if (!email) {
+    errors.push('Email is required');
+  } else if (!EMAIL_REGEX.test(email)) {
+    errors.push('Enter a valid email address');
+  }
+
+  if (!phone) {
+    errors.push('Phone is required');
+  } else if (!PHONE_REGEX.test(phone)) {
+    errors.push('Enter a valid 10-digit mobile number');
+  }
+
+  if (!password) {
+    errors.push('Password is required');
+  } else if (!PASSWORD_REGEX.test(password)) {
+    errors.push('Password must be at least 6 characters and include letters and numbers');
+  }
+
+  if (!role) {
+    errors.push('Role is required');
+  } else if (!ALLOWED_ROLES.includes(role)) {
+    errors.push('Select a valid role');
+  } else if (!REGISTERABLE_ROLES.includes(role)) {
+    errors.push('You cannot register for this role');
+  }
+
+  return {
+    errors,
+    values: { username, name, email, phone, password, role },
+  };
+}
+
+function validateLoginPayload(body) {
+  const errors = [];
+  const email = normalizeEmail(body.email);
+  const password = String(body.password ?? '');
+
+  if (!email) {
+    errors.push('Email is required');
+  } else if (!EMAIL_REGEX.test(email)) {
+    errors.push('Enter a valid email address');
+  }
+
+  if (!password) {
+    errors.push('Password is required');
+  } else if (password.length < 6) {
+    errors.push('Password must be at least 6 characters');
+  }
+
+  return {
+    errors,
+    values: { email, password },
+  };
+}
 
 function serializeUser(user) {
   return {
@@ -26,29 +128,52 @@ function serializeUser(user) {
 // @route   POST /api/auth/register
 // @access  Public
 exports.register = asyncHandler(async (req, res) => {
-  const { username, email, password } = req.body;
+  const { errors, values } = validateRegisterPayload(req.body);
+
+  if (errors.length > 0) {
+    return res.fail(errors[0], 400, { errors });
+  }
+
+  const existingUser = await User.findOne({ email: values.email });
+  if (existingUser) {
+    return res.fail('Email already registered', 400);
+  }
 
   const user = await User.create({
-    username,
-    name: username,
-    email,
-    password,
+    username: values.username,
+    name: values.name,
+    email: values.email,
+    phone: values.phone,
+    role: values.role,
+    status: 'pending',
+    password: values.password,
   });
 
-  sendTokenResponse(user, 201, res);
+  res.created(
+    {
+      user: serializeUser(user),
+      requiresApproval: true,
+    },
+    'Registration submitted. Please wait for admin approval before logging in.',
+  );
 });
 
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public
 exports.login = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+  const { errors, values } = validateLoginPayload(req.body);
 
-  if (!email || !password) {
-    return res.fail('Please provide an email and password', 400);
+  if (errors.length > 0) {
+    return res.fail(errors[0], 400, { errors });
   }
 
-  const user = await User.findOne({ email: String(email).trim().toLowerCase() }).select('+password');
+  let user = await User.findOne({ email: values.email }).select('+password');
+
+  if (!user && values.email === getDefaultAdminEmail()) {
+    await ensureDefaultAdmin();
+    user = await User.findOne({ email: values.email }).select('+password');
+  }
 
   if (!user || !user.password) {
     return res.fail('Invalid credentials', 401);
@@ -56,13 +181,17 @@ exports.login = asyncHandler(async (req, res) => {
 
   let isMatch = false;
   try {
-    isMatch = await user.matchPassword(password);
+    isMatch = await user.matchPassword(values.password);
   } catch (err) {
     return res.fail('Invalid credentials', 401);
   }
 
   if (!isMatch) {
     return res.fail('Invalid credentials', 401);
+  }
+
+  if (user.status === 'pending') {
+    return res.fail('Your account is pending admin approval.', 403);
   }
 
   if (user.status === 'inactive') {

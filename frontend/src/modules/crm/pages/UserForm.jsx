@@ -1,19 +1,25 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { toast } from 'react-toastify'
 import PageHeader from '../../../components/PageHeader.jsx'
-import { companiesApi } from '../../../services/companies.js'
 import { usersApi } from '../../../services/users.js'
+import {
+  normalizeDigits,
+  normalizeName,
+  validateEmail,
+  validateName,
+  validatePhone,
+  validateRequired,
+} from '../../../utils/formValidation.js'
+import { useToastFeedback } from '../../../utils/useToastFeedback.js'
 
 const emptyUser = {
-  company_id: '',
-  role_id: '',
   role: 'Admin',
   name: '',
   username: '',
   email: '',
   phone: '',
   password: '',
-  profile_photo: '',
   status: 'active',
 }
 
@@ -23,19 +29,13 @@ export default function UserForm({ mode }) {
   const isEdit = mode === 'edit'
 
   const [model, setModel] = useState(emptyUser)
-  const [companies, setCompanies] = useState([])
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
+  useToastFeedback({ error })
 
   const title = useMemo(() => (isEdit ? 'Edit User' : 'New User'), [isEdit])
-
-  useEffect(() => {
-    companiesApi
-      .list({ limit: 100 })
-      .then((res) => setCompanies(res.items || []))
-      .catch(() => {})
-  }, [])
 
   useEffect(() => {
     if (!isEdit) return
@@ -49,7 +49,6 @@ export default function UserForm({ mode }) {
         setModel({
           ...emptyUser,
           ...data,
-          company_id: data.company_id?.id || data.company_id || '',
           password: '',
         })
       })
@@ -69,27 +68,58 @@ export default function UserForm({ mode }) {
 
   function onChange(field) {
     return (e) => {
-      const value = e.target.value
+      const rawValue = e.target.value
+      const value =
+        field === 'phone' ? normalizeDigits(rawValue) : field === 'name' ? normalizeName(rawValue) : rawValue
+
+      let nextFieldError = ''
+      if (field === 'name') {
+        nextFieldError = validateRequired('Name', value) || validateName('Name', value)
+      }
+      if (field === 'email') {
+        nextFieldError = validateRequired('Email', value) || validateEmail('Email', value)
+      }
+
       setModel((prev) => ({
         ...prev,
         [field]: value,
         ...(field === 'name' && !prev.username ? { username: value } : null),
+      }))
+      setFieldErrors((prev) => ({
+        ...prev,
+        [field]: nextFieldError,
       }))
     }
   }
 
   async function onSubmit(e) {
     e.preventDefault()
+    const validationError =
+      validateRequired('Name', model.name) ||
+      validateName('Name', model.name) ||
+      validateEmail('Email', model.email) ||
+      validateRequired('Email', model.email) ||
+      validatePhone('Phone', model.phone) ||
+      (!isEdit ? validateRequired('Password', model.password) : '') ||
+      (model.password ? (model.password.length < 6 ? 'Password must be at least 6 characters' : '') : '')
+    if (validationError) {
+      setFieldErrors({
+        name: validateRequired('Name', model.name) || validateName('Name', model.name),
+        email: validateRequired('Email', model.email) || validateEmail('Email', model.email),
+      })
+      setError(validationError)
+      return
+    }
     setSaving(true)
     setError('')
 
     try {
       const payload = { ...model }
-      if (!payload.company_id) delete payload.company_id
       if (!payload.password) delete payload.password
       if (!payload.username) payload.username = payload.name
 
       const saved = isEdit ? await usersApi.update(id, payload) : await usersApi.create(payload)
+      toast.success(`User ${isEdit ? 'updated' : 'created'} successfully`)
       navigate(`/users/${saved.id}`)
     } catch (err) {
       setError(err.message || 'Failed to save user')
@@ -111,15 +141,16 @@ export default function UserForm({ mode }) {
             <div className="field">
               <label>Name *</label>
               <input className="input" required value={model.name} onChange={onChange('name')} />
+              {fieldErrors.name ? <div className="text-danger small">{fieldErrors.name}</div> : null}
             </div>
             <div className="field">
               <label>Email *</label>
               <input className="input" required type="email" value={model.email} onChange={onChange('email')} />
+              {fieldErrors.email ? <div className="text-danger small">{fieldErrors.email}</div> : null}
             </div>
-
             <div className="field">
-              <label>Username</label>
-              <input className="input" value={model.username} onChange={onChange('username')} />
+              <label>Phone</label>
+              <input className="input" value={model.phone} onChange={onChange('phone')} inputMode="numeric" maxLength={10} />
             </div>
             <div className="field">
               <label>Password {isEdit ? '(leave blank to keep current)' : '*'}</label>
@@ -134,40 +165,22 @@ export default function UserForm({ mode }) {
             </div>
 
             <div className="field">
-              <label>Company</label>
-              <select className="input" value={model.company_id} onChange={onChange('company_id')}>
-                <option value="">Select company</option>
-                {companies.map((company) => (
-                  <option key={company.id} value={company.id}>
-                    {company.company_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label>Phone</label>
-              <input className="input" value={model.phone} onChange={onChange('phone')} />
-            </div>
-
-            <div className="field">
               <label>Role *</label>
               <select className="input" required value={model.role} onChange={onChange('role')}>
                 <option value="Admin">Admin</option>
                 <option value="Manager">Manager</option>
-                <option value="Sales">Sales</option>
+                <option value="Accountant">Accountant</option>
+                <option value="Employee">Employee</option>
               </select>
             </div>
 
             <div className="field">
               <label>Status</label>
               <select className="input" value={model.status} onChange={onChange('status')}>
+                <option value="pending">Pending Approval</option>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
               </select>
-            </div>
-            <div className="field">
-              <label>Profile Photo URL</label>
-              <input className="input" value={model.profile_photo} onChange={onChange('profile_photo')} />
             </div>
           </div>
 

@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { toast } from 'react-toastify'
 import Pagination from '../../../components/Pagination.jsx'
 import PageHeader from '../../../components/PageHeader.jsx'
 import { leadsApi } from '../../../services/leads.js'
+import { useToastFeedback } from '../../../utils/useToastFeedback.js'
 export default function LeadNotes() {
   const [searchParams, setSearchParams] = useSearchParams()
   const pageParam = Math.max(1, Number(searchParams.get('page')) || 1)
@@ -17,6 +19,7 @@ export default function LeadNotes() {
   const [loadingLeads, setLoadingLeads] = useState(true)
   const [loadingNotes, setLoadingNotes] = useState(false)
   const [error, setError] = useState('')
+  useToastFeedback({ error })
 
   const selectedLead = useMemo(() => leads.find((l) => l.id === leadId) || null, [leads, leadId])
 
@@ -88,6 +91,7 @@ export default function LeadNotes() {
       const created = await leadsApi.addNote(leadId, { note })
       setNotes((prev) => [created, ...prev])
       setNoteText('')
+      toast.success('Note added successfully')
     } catch (e) {
       setError(e.message || 'Failed to add note')
     }
@@ -100,85 +104,92 @@ export default function LeadNotes() {
     try {
       await leadsApi.removeNote(leadId, noteId)
       setNotes((prev) => prev.filter((n) => n.id !== noteId))
+      toast.success('Note deleted successfully')
     } catch (e) {
       setError(e.message || 'Failed to delete note')
     }
   }
 
   return (
-    <div className="stack">
-      <PageHeader
-        title="Lead Notes"
-        backTo="/leads"
-        actions={
-          leadId ? (
-            <Link className="btn" to={`/leads/${leadId}`}>
-              Open Lead
-            </Link>
-          ) : null
-        }
-      />
-
-      {error ? <div className="alert error">{error}</div> : null}
-
-      <div className="filters">
-        <select
-          className="input"
-          value={leadId}
-          onChange={(e) => setLeadId(e.target.value)}
-          disabled={loadingLeads}
-        >
-          {loadingLeads ? <option value="">Loading leads...</option> : null}
-          {!loadingLeads && !leads.length ? <option value="">No leads found</option> : null}
-          {leads.map((l) => (
-            <option key={l.id} value={l.id}>
-              {l.name || l.email || l.phone || l.id}
-            </option>
-          ))}
-        </select>
-        <input className="input" value={selectedLead?.status || ''} readOnly placeholder="status" />
-        <input className="input" value={selectedLead?.source || ''} readOnly placeholder="source" />
-      </div>
-
-      <form className="row" onSubmit={addNote}>
-        <input
-          className="input"
-          value={noteText}
-          onChange={(e) => setNoteText(e.target.value)}
-          placeholder="Add a note..."
-          disabled={!leadId}
+    <div className="stack leadNotesPage">
+      <div className="leadNotesShell">
+        <PageHeader
+          title="Lead Notes"
+          description="Track follow-ups in a calmer workspace with clear status and source context."
+          backTo="/leads"
+          actions={
+            leadId ? (
+              <Link className="btn leadNotesAction" to={`/leads/${leadId}`}>
+                Open Lead
+              </Link>
+            ) : null
+          }
         />
-        <button className="btn primary" disabled={!leadId}>
-          Add
-        </button>
-      </form>
 
-      {loadingNotes ? (
-        <div className="muted">Loading...</div>
-      ) : notes.length ? (
-        <div className="stack">
-          {notes.map((n) => (
-            <div className="note" key={n.id}>
-              <div className="noteText">{n.note}</div>
-              <div className="noteMeta">
-                <span className="muted">{n.created_at ? new Date(n.created_at).toLocaleString() : ''}</span>
-                <button className="btn danger" onClick={() => deleteNote(n.id)} type="button">
-                   Delete
-                </button>
-              </div>
-            </div>
-          ))}
-          <Pagination 
-            page={page} 
-            limit={limit} 
-            total={total} 
-            onPageChange={(p) => setPage(p)} 
-            onLimitChange={(l) => { setLimit(l); setPage(1); }}
-          />
+        {error ? <div className="alert error">{error}</div> : null}
+
+        <div className="filters leadNotesFilters">
+          <select
+            className="input leadNotesInput"
+            value={leadId}
+            onChange={(e) => setLeadId(e.target.value)}
+            disabled={loadingLeads}
+          >
+            {loadingLeads ? <option value="">Loading leads...</option> : null}
+            {!loadingLeads && !leads.length ? <option value="">No leads found</option> : null}
+            {leads.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.name || l.email || l.phone || l.id}
+              </option>
+            ))}
+          </select>
+          <input className="input leadNotesInput" value={selectedLead?.status || ''} readOnly placeholder="Status" />
+          <input className="input leadNotesInput" value={selectedLead?.source || ''} readOnly placeholder="Source" />
         </div>
-      ) : (
-        <div className="muted">No notes yet.</div>
-      )}
+
+        <form className="leadNotesComposer" onSubmit={addNote}>
+          <input
+            className="input leadNotesComposerInput"
+            value={noteText}
+            onChange={(e) => setNoteText(e.target.value)}
+            placeholder="Add a note..."
+            disabled={!leadId}
+          />
+          <button className="btn primary leadNotesAddBtn" disabled={!leadId}>
+            Add
+          </button>
+        </form>
+
+        {loadingNotes ? (
+          <div className="leadNotesState muted">Loading...</div>
+        ) : notes.length ? (
+          <div className="stack leadNotesList">
+            {notes.map((n) => (
+              <div className="note leadNotesCard" key={n.id}>
+                <div className="noteText">{n.note}</div>
+                <div className="noteMeta leadNotesMeta">
+                  <span className="muted">{n.created_at ? new Date(n.created_at).toLocaleString() : ''}</span>
+                  <button className="btn danger leadNotesDeleteBtn" onClick={() => deleteNote(n.id)} type="button">
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+            <Pagination
+              page={page}
+              limit={limit}
+              total={total}
+              onPageChange={(p) => setPage(p)}
+              onLimitChange={(l) => {
+                setLimit(l)
+                setPage(1)
+              }}
+            />
+          </div>
+        ) : (
+          <div className="leadNotesState muted">No notes yet.</div>
+        )}
+      </div>
     </div>
   )
 }

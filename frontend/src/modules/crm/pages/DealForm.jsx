@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { toast } from 'react-toastify'
 import PageHeader from '../../../components/PageHeader.jsx'
 import { dealsApi } from '../../../services/deals'
 import { customersApi } from '../../../services/customers'
+import { validateNonNegativeNumber, validateRequired } from '../../../utils/formValidation.js'
+import { useToastFeedback } from '../../../utils/useToastFeedback.js'
 
 const emptyDeal = {
   name: '',
@@ -24,6 +27,7 @@ export default function DealForm({ mode }) {
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  useToastFeedback({ error })
 
   useEffect(() => {
     customersApi.list({ limit: 100 }).then((res) => setCustomers(res.items || []))
@@ -42,11 +46,21 @@ export default function DealForm({ mode }) {
 
   async function onSubmit(e) {
     e.preventDefault()
+    const validationError =
+      validateRequired('Deal name', model.name) ||
+      validateRequired('Customer', model.customer_id) ||
+      validateNonNegativeNumber('Value', model.value)
+    if (validationError) {
+      setError(validationError)
+      return
+    }
     setSaving(true)
+    setError('')
     try {
       const saved = isEdit ? await dealsApi.update(id, model) : await dealsApi.create(model)
+      toast.success(`Deal ${isEdit ? 'updated' : 'created'} successfully`)
       navigate(`/deals/${saved.id}`)
-    } catch (err) {
+    } catch {
       setError('Failed to save deal')
     } finally {
       setSaving(false)
@@ -98,6 +112,7 @@ export default function DealForm({ mode }) {
                <input
                 className="input"
                 type="number"
+                min="0"
                 value={model.value}
                 onChange={(e) => setModel({ ...model, value: Number(e.target.value) })}
               />

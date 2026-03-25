@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
+import { toast } from 'react-toastify'
 import { notificationsApi } from '../../../services/notifications'
 import { Icon } from '../../../layouts/icons.jsx'
 import Pagination from '../../../components/Pagination.jsx'
 import { useSearchParams } from 'react-router-dom'
 import PageHeader from '../../../components/PageHeader.jsx'
+import { useToastFeedback } from '../../../utils/useToastFeedback.js'
 
 export default function NotificationsList() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -15,6 +17,7 @@ export default function NotificationsList() {
   const [limit, setLimit] = useState(Number(searchParams.get('limit')) || 10)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  useToastFeedback({ error })
 
   useEffect(() => {
     const next = new URLSearchParams(searchParams)
@@ -45,6 +48,7 @@ export default function NotificationsList() {
   async function handleMarkRead(id) {
     try {
       await notificationsApi.markAsRead(id)
+      toast.success('Notification marked as read')
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
       )
@@ -57,6 +61,7 @@ export default function NotificationsList() {
     if (!confirm('Delete this notification?')) return
     try {
       await notificationsApi.remove(id)
+      toast.success('Notification deleted successfully')
       setNotifications((prev) => prev.filter((n) => n.id !== id))
     } catch (err) {
       setError('Failed to delete notification')
@@ -66,6 +71,7 @@ export default function NotificationsList() {
   async function handleMarkAllRead() {
     try {
       await notificationsApi.markAllAsRead()
+      toast.success('All notifications marked as read')
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })))
     } catch (err) {
       setError('Failed to mark all as read')

@@ -37,6 +37,8 @@ const userSchema = new mongoose.Schema(
     phone: {
       type: String,
       trim: true,
+      maxlength: [10, 'Phone number cannot exceed 10 digits'],
+      match: [/^[6-9]\d{9}$/, 'Please add a valid 10-digit mobile number'],
     },
     role: {
       type: String,

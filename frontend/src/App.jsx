@@ -4,35 +4,29 @@ import 'react-toastify/dist/ReactToastify.css'
 import './App.css'
 import AppLayout from './layouts/AppLayout.jsx'
 import Dashboard from './pages/Dashboard.jsx'
-import Profile from './pages/Profile.jsx'
-import Search from './pages/Search.jsx'
-import Settings from './pages/Settings.jsx'
-import NotificationsList from './modules/crm/pages/NotificationsList.jsx'
-import CompaniesList from './modules/crm/pages/CompaniesList.jsx'
-import CompanyForm from './modules/crm/pages/CompanyForm.jsx'
+import AccessDenied from './pages/AccessDenied.jsx'
 import CustomersList from './modules/crm/pages/CustomersList.jsx'
 import CustomerDetail from './modules/crm/pages/CustomerDetail.jsx'
 import CustomerForm from './modules/crm/pages/CustomerForm.jsx'
 import LeadsList from './modules/crm/pages/LeadsList.jsx'
 import LeadForm from './modules/crm/pages/LeadForm.jsx'
 import LeadDetail from './modules/crm/pages/LeadDetail.jsx'
-import LeadNotes from './modules/crm/pages/LeadNotes.jsx'
-import TasksList from './modules/crm/pages/TasksList.jsx'
 import DealsList from './modules/crm/pages/DealsList.jsx'
 import DealForm from './modules/crm/pages/DealForm.jsx'
 import DealDetail from './modules/crm/pages/DealDetail.jsx'
-import OrdersList from './modules/crm/pages/OrdersList.jsx'
-import SupportList from './modules/crm/pages/SupportList.jsx'
-import ProductsList from './modules/crm/pages/ProductsList.jsx'
-import ProductForm from './modules/crm/pages/ProductForm.jsx'
 import UsersList from './modules/crm/pages/UsersList.jsx'
+import UserDetail from './modules/crm/pages/UserDetail.jsx'
 import UserForm from './modules/crm/pages/UserForm.jsx'
-import MasterData from './modules/crm/pages/MasterData.jsx'
+import TrashList from './modules/crm/pages/TrashList.jsx'
 import Reports from './modules/crm/pages/Reports.jsx'
+import TasksList from './modules/crm/pages/TasksList.jsx'
+import LeadNotes from './modules/crm/pages/LeadNotes.jsx'
+import Billing from './modules/crm/pages/Billing.jsx'
 import Login from './pages/Login.jsx'
 import Register from './pages/Register.jsx'
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
+import { ROLE_GROUPS } from './utils/accessControl'
 
 export default function App() {
   return (
@@ -40,6 +34,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/access-denied" element={<AccessDenied />} />
 
         <Route
           element={
@@ -49,14 +44,10 @@ export default function App() {
           }
         >
           <Route index element={<Dashboard />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/notifications" element={<NotificationsList />} />
-          <Route path="/search" element={<Search />} />
 
           <Route
             element={
-              <ProtectedRoute allowedRoles={['Admin', 'Manager', 'Sales']}>
+              <ProtectedRoute allowedRoles={ROLE_GROUPS.allAuthenticated}>
                 <Outlet />
               </ProtectedRoute>
             }
@@ -70,45 +61,56 @@ export default function App() {
             <Route path="/leads/new" element={<LeadForm mode="create" />} />
             <Route path="/leads/:id/edit" element={<LeadForm mode="edit" />} />
             <Route path="/leads/:id" element={<LeadDetail />} />
-            <Route path="/lead-notes" element={<LeadNotes />} />
-            <Route path="/tasks" element={<TasksList />} />
 
             <Route path="/deals" element={<DealsList />} />
             <Route path="/deals/new" element={<DealForm mode="create" />} />
             <Route path="/deals/:id" element={<DealDetail />} />
             <Route path="/deals/:id/edit" element={<DealForm mode="edit" />} />
-
-            <Route path="/orders" element={<OrdersList />} />
-            <Route path="/support" element={<SupportList />} />
-            <Route path="/products" element={<ProductsList />} />
-            <Route path="/products/new" element={<ProductForm mode="create" />} />
-            <Route path="/products/:id/edit" element={<ProductForm mode="edit" />} />
+            <Route path="/trash" element={<TrashList />} />
           </Route>
 
           <Route
             element={
-              <ProtectedRoute allowedRoles={['Admin', 'Manager']}>
-                <Outlet />
-              </ProtectedRoute>
-            }
-          >
-            <Route path="/companies" element={<CompaniesList />} />
-            <Route path="/companies/new" element={<CompanyForm mode="create" />} />
-            <Route path="/companies/:id" element={<CompanyForm mode="edit" />} />
-          </Route>
-
-          <Route
-            element={
-              <ProtectedRoute allowedRoles={['Admin']}>
+              <ProtectedRoute allowedRoles={ROLE_GROUPS.admins}>
                 <Outlet />
               </ProtectedRoute>
             }
           >
             <Route path="/users" element={<UsersList />} />
             <Route path="/users/new" element={<UserForm mode="create" />} />
-            <Route path="/users/:id" element={<UserForm mode="edit" />} />
-            <Route path="/master-data" element={<MasterData />} />
+            <Route path="/users/:id" element={<UserDetail />} />
+            <Route path="/users/:id/edit" element={<UserForm mode="edit" />} />
+            <Route path="/billing" element={<Billing />} />
+          </Route>
+
+          <Route
+            element={
+              <ProtectedRoute allowedRoles={ROLE_GROUPS.reportsAccess}>
+                <Outlet />
+              </ProtectedRoute>
+            }
+          >
             <Route path="/reports" element={<Reports />} />
+          </Route>
+
+          <Route
+            element={
+              <ProtectedRoute allowedRoles={ROLE_GROUPS.tasksAccess}>
+                <Outlet />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="/tasks" element={<TasksList />} />
+          </Route>
+
+          <Route
+            element={
+              <ProtectedRoute allowedRoles={ROLE_GROUPS.followupsAccess}>
+                <Outlet />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="/followups" element={<LeadNotes />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

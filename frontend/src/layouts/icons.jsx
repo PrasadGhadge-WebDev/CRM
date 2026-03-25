@@ -195,6 +195,20 @@ export function Icon({ name }) {
           <path {...stroke} d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
         </svg>
       )
+    case 'eye':
+      return (
+        <svg {...common} aria-hidden="true">
+          <path {...stroke} d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z" />
+          <circle {...stroke} cx="12" cy="12" r="3" />
+        </svg>
+      )
+    case 'plus':
+      return (
+        <svg {...common} aria-hidden="true">
+          <path {...stroke} d="M12 5v14" />
+          <path {...stroke} d="M5 12h14" />
+        </svg>
+      )
     case 'trash':
       return (
         <svg {...common} aria-hidden="true">
@@ -240,6 +254,23 @@ export function Icon({ name }) {
           <path {...stroke} d="m7.5 4.21 4.5 2.66 4.5-2.66" />
           <path {...stroke} d="m12 22 4.5-2.66V14.2l-4.5 2.66-4.5-2.66v5.14L12 22Z" />
           <path {...stroke} d="m12 11.58 4.5-2.66V3.78L12 1.12 7.5 3.78v5.14l4.5 2.66Z" />
+        </svg>
+      )
+
+    case 'billing':
+      return (
+        <svg {...common} aria-hidden="true">
+          <rect {...stroke} x="2" y="5" width="20" height="14" rx="2" />
+          <line {...stroke} x1="2" y1="10" x2="22" y2="10" />
+        </svg>
+      )
+    case 'archive':
+      return (
+        <svg {...common} aria-hidden="true">
+          <path {...stroke} d="M3 7h18" />
+          <path {...stroke} d="M5 7h14v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7Z" />
+          <path {...stroke} d="M9 12h6" />
+          <path {...stroke} d="M4 3h16v4H4z" />
         </svg>
       )
 

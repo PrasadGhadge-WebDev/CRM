@@ -1,43 +1,54 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { toast } from 'react-toastify'
 import Pagination from '../../../components/Pagination.jsx'
 import PageHeader from '../../../components/PageHeader.jsx'
-import { companiesApi } from '../../../services/companies.js'
+import { Icon } from '../../../layouts/icons.jsx'
 import { usersApi } from '../../../services/users.js'
 import { useDebouncedValue } from '../../../utils/useDebouncedValue.js'
+import { useToastFeedback } from '../../../utils/useToastFeedback.js'
+
+const ROLE_OPTIONS = ['Admin', 'Manager', 'Accountant', 'Employee']
+
+function formatDateTime(value) {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '-'
+  return date.toLocaleString()
+}
+
+function stopRowNavigation(event) {
+  event.stopPropagation()
+}
 
 export default function UsersList() {
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const qParam = searchParams.get('q') || ''
   const statusParam = searchParams.get('status') || ''
-  const companyIdParam = searchParams.get('companyId') || ''
+  const roleParam = searchParams.get('role') || ''
   const pageParam = Math.max(1, Number(searchParams.get('page') || 1) || 1)
-  const limitParam = Math.min(100, Math.max(1, Number(searchParams.get('limit') || 20) || 20))
+  const rawLimitParam = (searchParams.get('limit') || '20').trim().toLowerCase()
+  const limitParam =
+    rawLimitParam === 'all' ? 'all' : Math.min(100, Math.max(1, Number(rawLimitParam) || 20))
 
   const [items, setItems] = useState([])
-  const [companies, setCompanies] = useState([])
   const [q, setQ] = useState(qParam)
   const [status, setStatus] = useState(statusParam)
-  const [companyId, setCompanyId] = useState(companyIdParam)
+  const [role, setRole] = useState(roleParam)
   const [page, setPage] = useState(pageParam)
   const [limit, setLimit] = useState(limitParam)
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  useToastFeedback({ error })
 
   const debouncedQ = useDebouncedValue(q, 250)
 
-  useEffect(() => {
-    companiesApi
-      .list({ limit: 100 })
-      .then((res) => setCompanies(res.items || []))
-      .catch(() => {})
-  }, [])
-
   useEffect(() => setQ(qParam), [qParam])
   useEffect(() => setStatus(statusParam), [statusParam])
-  useEffect(() => setCompanyId(companyIdParam), [companyIdParam])
+  useEffect(() => setRole(roleParam), [roleParam])
   useEffect(() => setPage(pageParam), [pageParam])
   useEffect(() => setLimit(limitParam), [limitParam])
 
@@ -46,11 +57,11 @@ export default function UsersList() {
     const trimmedQ = debouncedQ.trim()
     if (trimmedQ) next.set('q', trimmedQ)
     if (status.trim()) next.set('status', status.trim())
-    if (companyId.trim()) next.set('companyId', companyId.trim())
+    if (role.trim()) next.set('role', role.trim())
     if (page > 1) next.set('page', String(page))
-    if (limit !== 20) next.set('limit', String(limit))
+    if (String(limit) !== '20') next.set('limit', String(limit))
     return next
-  }, [debouncedQ, status, companyId, page, limit])
+  }, [debouncedQ, status, role, page, limit])
 
   useEffect(() => {
     if (desiredParams.toString() === searchParams.toString()) return
@@ -66,7 +77,7 @@ export default function UsersList() {
       .list({
         ...(debouncedQ.trim() ? { q: debouncedQ.trim() } : null),
         ...(status.trim() ? { status: status.trim() } : null),
-        ...(companyId.trim() ? { companyId: companyId.trim() } : null),
+        ...(role.trim() ? { role: role.trim() } : null),
         page,
         limit,
       })
@@ -87,11 +98,12 @@ export default function UsersList() {
     return () => {
       canceled = true
     }
-  }, [debouncedQ, status, companyId, page, limit])
+  }, [debouncedQ, status, role, page, limit])
 
   async function onDelete(id) {
-    if (!confirm('Delete this user?')) return
+    if (!confirm('Are you sure you want to move this user to trash?')) return
     await usersApi.remove(id)
+    toast.success('User moved to trash')
     setItems((prev) => prev.filter((x) => x.id !== id))
     setTotal((t) => Math.max(0, (Number(t) || 0) - 1))
   }
@@ -102,11 +114,29 @@ export default function UsersList() {
         title="Users"
         backTo="/"
         actions={
-          <Link className="btn primary" to="/users/new">
-            + New
-          </Link>
+          <div className="tableActions">
+            <button
+              className="iconBtn"
+              type="button"
+              title="View all users"
+              aria-label="View all users"
+              onClick={() => {
+                setLimit('all')
+                setPage(1)
+              }}
+            >
+              <Icon name="users" />
+            </button>
+            <Link className="iconBtn" to="/users/new" title="Add user" aria-label="Add user">
+              <Icon name="plus" />
+            </Link>
+          </div>
         }
       />
+
+      <div className="muted">
+        Showing {items.length} of {total} users
+      </div>
 
       <div className="filters">
         <input
@@ -120,16 +150,16 @@ export default function UsersList() {
         />
         <select
           className="input"
-          value={companyId}
+          value={role}
           onChange={(e) => {
-            setCompanyId(e.target.value)
+            setRole(e.target.value)
             setPage(1)
           }}
         >
-          <option value="">All companies</option>
-          {companies.map((company) => (
-            <option key={company.id} value={company.id}>
-              {company.company_name}
+          <option value="">All Roles</option>
+          {ROLE_OPTIONS.map((roleOption) => (
+            <option key={roleOption} value={roleOption}>
+              {roleOption}
             </option>
           ))}
         </select>
@@ -141,7 +171,8 @@ export default function UsersList() {
             setPage(1)
           }}
         >
-          <option value="">All statuses</option>
+          <option value="">All Status</option>
+          <option value="pending">Pending</option>
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
         </select>
@@ -160,31 +191,77 @@ export default function UsersList() {
                   <th>Name</th>
                   <th>Email</th>
                   <th>Role</th>
-                  <th>Company</th>
                   <th>Status</th>
+                  <th>Created At</th>
+                  <th>Updated At</th>
                   <th className="right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {items.length ? (
                   items.map((user) => (
-                    <tr key={user.id}>
-                      <td>{user.name || user.username || '-'}</td>
+                    <tr
+                      key={user.id}
+                      className="tableRowLink"
+                      onClick={() => {
+                        navigate(`/users/${user.id}`)
+                      }}
+                    >
+                      <td>
+                        <div className="userIdentity">
+                          {user.profile_photo ? (
+                            <img
+                              className="tableAvatarImage"
+                              src={user.profile_photo}
+                              alt={user.name || user.username || 'User'}
+                            />
+                          ) : (
+                            <div className="avatar tableAvatarFallback">
+                              {(user.name || user.username || 'U').charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div>
+                            <Link
+                              className="tableLink"
+                              to={`/users/${user.id}`}
+                              onClick={stopRowNavigation}
+                            >
+                              {user.name || user.username || '-'}
+                            </Link>
+                          </div>
+                        </div>
+                      </td>
                       <td>{user.email || '-'}</td>
                       <td>{user.role || 'Admin'}</td>
-                      <td>{user.company_id?.company_name || '-'}</td>
                       <td>
-                        <span className={`badge ${user.status === 'active' ? 'success' : 'warning'}`}>
+                        <span className={`badge ${user.status === 'active' ? 'success' : user.status === 'pending' ? 'info' : 'warning'}`}>
                           {user.status || 'active'}
                         </span>
                       </td>
+                      <td>{formatDateTime(user.created_at)}</td>
+                      <td>{formatDateTime(user.updated_at)}</td>
                       <td className="right">
                         <div className="tableActions">
-                          <Link className="btn" to={`/users/${user.id}`}>
-                            Edit
+                          <Link
+                            className="iconBtn"
+                            to={`/users/${user.id}/edit`}
+                            title="Edit user"
+                            aria-label="Edit user"
+                            onClick={stopRowNavigation}
+                          >
+                            <Icon name="edit" />
                           </Link>
-                          <button className="btn danger" type="button" onClick={() => onDelete(user.id)}>
-                            Delete
+                          <button
+                            className="iconBtn text-danger"
+                            type="button"
+                            onClick={(event) => {
+                              stopRowNavigation(event)
+                              onDelete(user.id)
+                            }}
+                            title="Delete user"
+                            aria-label="Delete user"
+                          >
+                            <Icon name="trash" />
                           </button>
                         </div>
                       </td>
@@ -192,7 +269,7 @@ export default function UsersList() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="6">
+                    <td colSpan="7">
                       <div className="emptyState">
                         <div className="emptyStateTitle">No users found</div>
                         <div className="emptyStateText">

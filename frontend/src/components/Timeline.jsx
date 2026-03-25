@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { notesApi } from '../services/notes'
 import { activitiesApi } from '../services/activities'
 import { toast } from 'react-toastify'
+import { useToastFeedback } from '../utils/useToastFeedback.js'
 
 export default function Timeline({ relatedId, relatedType }) {
   const [items, setItems] = useState([])
@@ -12,6 +13,7 @@ export default function Timeline({ relatedId, relatedType }) {
   const [activityDesc, setActivityDesc] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [showActivityForm, setShowActivityForm] = useState(false)
+  useToastFeedback({ error })
 
   useEffect(() => {
     loadTimeline()

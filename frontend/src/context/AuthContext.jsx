@@ -35,7 +35,10 @@ export const AuthProvider = ({ children }) => {
 
   const login = useCallback(async (email, password) => {
     try {
-      const response = await api.post('/api/auth/login', { email, password })
+      const response = await api.post('/api/auth/login', {
+        email: String(email ?? '').trim().toLowerCase(),
+        password,
+      })
       const { user: nextUser, token } = response
 
       storeSession(nextUser, token)
@@ -47,15 +50,21 @@ export const AuthProvider = ({ children }) => {
     }
   }, [])
 
-  const register = useCallback(async (username, email, password) => {
+  const register = useCallback(async (payload) => {
     try {
-      const response = await api.post('/api/auth/register', { username, email, password })
-      const { user: nextUser, token } = response
-
-      storeSession(nextUser, token)
-      setUser(nextUser)
-
-      return { success: true }
+      const response = await api.post('/api/auth/register', {
+        username: String(payload.username ?? '').trim(),
+        name: String(payload.fullName ?? '').trim(),
+        email: String(payload.email ?? '').trim().toLowerCase(),
+        phone: String(payload.phone ?? '').trim(),
+        password: payload.password,
+        role: String(payload.role ?? '').trim(),
+      })
+      return {
+        success: true,
+        requiresApproval: Boolean(response?.requiresApproval),
+        message: 'Registration submitted. Wait for admin approval before logging in.',
+      }
     } catch (error) {
       return { success: false, message: error?.response?.data?.message || error.message }
     }

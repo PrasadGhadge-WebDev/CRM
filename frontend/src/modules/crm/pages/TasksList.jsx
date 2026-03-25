@@ -89,11 +89,11 @@ export default function TasksList() {
   }
 
   async function onDelete(id) {
-    if (!confirm('Delete task?')) return
+    if (!confirm('Are you sure you want to move this task to trash?')) return
     try {
       await activitiesApi.remove(id)
-      toast.success('Task deleted')
-      loadTasks()
+      toast.success('Task moved to trash')
+    loadTasks()
     } catch (err) {
       toast.error('Delete failed')
     }
@@ -140,6 +140,7 @@ export default function TasksList() {
         <FilterBar 
           filters={filters}
           onFilterChange={handleFilterChange}
+          resetSort={{ field: 'activity_date', order: 'desc' }}
           sortFields={[
             { key: 'description', label: 'Name' },
             { key: 'activity_date', label: 'Date' }

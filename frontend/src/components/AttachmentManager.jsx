@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
+import { toast } from 'react-toastify'
 import { attachmentsApi } from '../services/attachments'
 import { Icon } from '../layouts/icons.jsx'
+import { useToastFeedback } from '../utils/useToastFeedback.js'
 
 export default function AttachmentManager({ relatedId, relatedType }) {
   const [attachments, setAttachments] = useState([])
   const [uploading, setUploading] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  useToastFeedback({ error })
 
   useEffect(() => {
     loadAttachments()
@@ -37,6 +40,7 @@ export default function AttachmentManager({ relatedId, relatedType }) {
       formData.append('related_type', relatedType)
 
       await attachmentsApi.upload(formData)
+      toast.success('Attachment uploaded')
       loadAttachments()
     } catch (err) {
       setError('Upload failed. Size limit 10MB.')
@@ -50,6 +54,7 @@ export default function AttachmentManager({ relatedId, relatedType }) {
     if (!confirm('Delete this file?')) return
     try {
       await attachmentsApi.remove(id)
+      toast.success('Attachment deleted')
       setAttachments((prev) => prev.filter((a) => a.id !== id))
     } catch (err) {
       setError('Delete failed')

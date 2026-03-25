@@ -66,12 +66,12 @@
 .navItem {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  margin-bottom: 4px;
+  gap: var(--space-md);
+  padding: 10px 14px;
+  margin-bottom: var(--space-xs);
   border-radius: var(--radius-md);
   text-decoration: none;
-  color: var(--muted);
+  color: var(--text-muted);
   font-weight: 500;
   font-size: 0.95rem;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -86,14 +86,16 @@
 }
 
 .navItem:hover {
-  background: var(--surface-1);
+  background: var(--primary-soft);
   color: var(--text);
+  transform: translateX(2px);
 }
 
 .navItem.active {
-  background: var(--primary-soft);
-  color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
   font-weight: 600;
+  box-shadow: var(--shadow-md);
 }
 
 .navIcon {
@@ -102,28 +104,33 @@
   justify-content: center;
   width: 20px;
   height: 20px;
-  opacity: 0.7;
+  opacity: 0.8;
   transition: opacity 0.2s;
 }
 
-.navItem:hover .navIcon,
 .navItem.active .navIcon {
   opacity: 1;
 }
 
 .sidebarBottom {
-  padding: 16px;
+  padding: var(--space-lg);
   border-top: 1px solid var(--border);
 }
 
 .userCard {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
   border-radius: var(--radius-lg);
-  background: var(--surface-2);
+  background: var(--bg-surface);
   border: 1px solid var(--border);
+  transition: all 0.2s;
+}
+
+.userCard:hover {
+  border-color: var(--primary-2);
+  background: var(--bg-elevated);
 }
 
 .avatar {
@@ -172,4 +179,3 @@
 .userMeta {
   transition: opacity 0.3s ease, width 0.3s ease;
 }
-

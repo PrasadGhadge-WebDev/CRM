@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { toast } from 'react-toastify'
 import { Icon } from '../../../layouts/icons.jsx'
 import Pagination from '../../../components/Pagination.jsx'
 import FilterBar from '../../../components/FilterBar.jsx'
 import PageHeader from '../../../components/PageHeader.jsx'
 import { companiesApi } from '../../../services/companies.js'
 import { useDebouncedValue } from '../../../utils/useDebouncedValue.js'
+import { useToastFeedback } from '../../../utils/useToastFeedback.js'
 
 export default function CompaniesList() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -14,6 +16,7 @@ export default function CompaniesList() {
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  useToastFeedback({ error })
 
   // Filter & Sort State
   const [filters, setFilters] = useState({
@@ -65,9 +68,10 @@ export default function CompaniesList() {
   }
 
   async function onDelete(id) {
-    if (!confirm('Delete this company?')) return
+    if (!confirm('Are you sure you want to move this company to trash?')) return
     try {
       await companiesApi.remove(id)
+      toast.success('Company moved to trash')
       loadCompanies()
     } catch (err) {
       setError('Delete failed')
@@ -75,83 +79,86 @@ export default function CompaniesList() {
   }
 
   return (
-    <div className="stack">
-      <PageHeader
-        title="Companies"
-        backTo="/"
-        actions={<Link className="btn primary" to="/companies/new">+ New Company</Link>}
-      />
+    <div className="stack companiesPage">
+      <div className="companiesShell">
+        <PageHeader
+          title="Companies"
+          backTo="/"
+          actions={<Link className="btn primary" to="/companies/new">+ New Company</Link>}
+        />
 
-      <div className="card noPadding stack">
-        <div className="padding">
-           <input 
-             className="input" 
-             placeholder="Search company/email/phone/tax..." 
-             value={filters.q}
-             onChange={(e) => handleFilterChange({ q: e.target.value })}
-           />
+        <div className="card noPadding stack">
+          <div className="padding">
+             <input 
+               className="input" 
+               placeholder="Search company/email/phone/tax..." 
+               value={filters.q}
+               onChange={(e) => handleFilterChange({ q: e.target.value })}
+             />
+          </div>
+
+          <FilterBar 
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            resetSort={{ field: 'created_at', order: 'desc' }}
+            sortFields={[
+              { key: 'company_name', label: 'Name' },
+              { key: 'created_at', label: 'Date Added' }
+            ]}
+            currentSort={{ field: filters.sortField, order: filters.sortOrder }}
+            options={{
+              status: [
+                { value: 'active', label: 'Active' },
+                { value: 'inactive', label: 'Inactive' }
+              ]
+            }}
+          />
         </div>
 
-        <FilterBar 
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          sortFields={[
-            { key: 'company_name', label: 'Name' },
-            { key: 'created_at', label: 'Date Added' }
-          ]}
-          currentSort={{ field: filters.sortField, order: filters.sortOrder }}
-          options={{
-            status: [
-              { value: 'active', label: 'Active' },
-              { value: 'inactive', label: 'Inactive' }
-            ]
-          }}
-        />
-      </div>
+        {error && <div className="alert error">{error}</div>}
 
-      {error && <div className="alert error">{error}</div>}
-
-      <div className="tableWrap">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Company</th>
-              <th>Email</th>
-              <th>Currency</th>
-              <th>Status</th>
-              <th className="right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((company) => (
-              <tr key={company.id}>
-                <td>{company.company_name}</td>
-                <td>{company.email || '-'}</td>
-                <td>{company.settings?.currency || 'USD'}</td>
-                <td>
-                  <span className={`badge ${company.status === 'active' ? 'success' : 'warning'}`}>
-                    {company.status || 'active'}
-                  </span>
-                </td>
-                <td className="right">
-                  <div className="tableActions">
-                    <Link className="iconBtn" to={`/companies/${company.id}`} title="Edit">
-                      <Icon name="edit" />
-                    </Link>
-                    <button className="iconBtn text-danger" onClick={() => onDelete(company.id)} title="Delete">
-                      <Icon name="trash" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {!items.length && !loading && (
+        <div className="tableWrap">
+          <table className="table">
+            <thead>
               <tr>
-                <td colSpan="5" className="center muted padding30">No companies found.</td>
+                <th>Company</th>
+                <th>Email</th>
+                <th>Currency</th>
+                <th>Status</th>
+                <th className="right">Actions</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {items.map((company) => (
+                <tr key={company.id}>
+                  <td>{company.company_name}</td>
+                  <td>{company.email || '-'}</td>
+                  <td>{company.settings?.currency || 'USD'}</td>
+                  <td>
+                    <span className={`badge ${company.status === 'active' ? 'success' : 'warning'}`}>
+                      {company.status || 'active'}
+                    </span>
+                  </td>
+                  <td className="right">
+                    <div className="tableActions">
+                      <Link className="iconBtn" to={`/companies/${company.id}`} title="Edit">
+                        <Icon name="edit" />
+                      </Link>
+                      <button className="iconBtn text-danger" onClick={() => onDelete(company.id)} title="Delete">
+                        <Icon name="trash" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {!items.length && !loading && (
+                <tr>
+                  <td colSpan="5" className="center muted padding30">No companies found.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <Pagination 

@@ -1,11 +1,13 @@
 import { useEffect, useCallback, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { toast } from 'react-toastify'
 import { Icon } from '../../../layouts/icons.jsx'
 import Pagination from '../../../components/Pagination.jsx'
 import FilterBar from '../../../components/FilterBar.jsx'
 import PageHeader from '../../../components/PageHeader.jsx'
 import { dealsApi } from '../../../services/deals'
 import { useDebouncedValue } from '../../../utils/useDebouncedValue.js'
+import { useToastFeedback } from '../../../utils/useToastFeedback.js'
 
 export default function DealsList() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -14,6 +16,7 @@ export default function DealsList() {
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  useToastFeedback({ error })
 
   // Filter & Sort State
   const [filters, setFilters] = useState({
@@ -71,9 +74,10 @@ export default function DealsList() {
   }
 
   async function onDelete(id) {
-    if (!confirm('Delete deal?')) return
+    if (!confirm('Are you sure you want to move this deal to trash?')) return
     try {
       await dealsApi.remove(id)
+      toast.success('Deal moved to trash')
       loadDeals()
     } catch (err) {
       setError('Delete failed')
@@ -101,6 +105,7 @@ export default function DealsList() {
         <FilterBar 
           filters={filters}
           onFilterChange={handleFilterChange}
+          resetSort={{ field: 'created_at', order: 'desc' }}
           sortFields={[
             { key: 'name', label: 'Name' },
             { key: 'created_at', label: 'Date Added' }

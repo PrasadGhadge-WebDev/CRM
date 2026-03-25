@@ -10,6 +10,7 @@ const LeadSchema = new mongoose.Schema(
     source: { type: String, trim: true },
     status: { type: String, trim: true, default: 'new', index: true },
     assigned_to: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
+    follow_up_date: { type: Date },
     notes: { type: String, trim: true },
   },
   { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } },
@@ -18,4 +19,3 @@ const LeadSchema = new mongoose.Schema(
 withIdTransform(LeadSchema);
 
 module.exports = mongoose.model('Lead', LeadSchema);
-

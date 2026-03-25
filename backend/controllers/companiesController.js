@@ -1,5 +1,6 @@
 const Company = require('../models/Company');
 const { asyncHandler } = require('../middleware/asyncHandler');
+const { moveDocumentToTrash } = require('../utils/trash');
 
 function buildSearchQuery(q) {
   if (!q) return null;
@@ -63,9 +64,10 @@ exports.updateCompany = asyncHandler(async (req, res) => {
 });
 
 exports.deleteCompany = asyncHandler(async (req, res) => {
-  const deleted = await Company.findByIdAndDelete(req.params.id);
-  if (!deleted) {
+  const company = await Company.findById(req.params.id);
+  if (!company) {
     return res.fail('Company not found', 404);
   }
-  res.ok(null, 'Company deleted');
+  await moveDocumentToTrash({ entityType: 'company', document: company, deletedBy: req.user?.id });
+  res.ok(null, 'Company moved to trash');
 });

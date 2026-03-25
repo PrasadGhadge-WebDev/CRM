@@ -1,11 +1,13 @@
 import { useEffect, useCallback, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { toast } from 'react-toastify'
 import { Icon } from '../../../layouts/icons.jsx'
 import Pagination from '../../../components/Pagination.jsx'
 import FilterBar from '../../../components/FilterBar.jsx'
 import PageHeader from '../../../components/PageHeader.jsx'
 import { productsApi } from '../../../services/products.js'
 import { useDebouncedValue } from '../../../utils/useDebouncedValue.js'
+import { useToastFeedback } from '../../../utils/useToastFeedback.js'
 
 export default function ProductsList() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -13,6 +15,7 @@ export default function ProductsList() {
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  useToastFeedback({ error })
 
   const [filters, setFilters] = useState({
     q: searchParams.get('q') || '',
@@ -61,9 +64,10 @@ export default function ProductsList() {
   }
 
   async function onDelete(id) {
-    if (!confirm('Delete product?')) return
+    if (!confirm('Are you sure you want to move this product to trash?')) return
     try {
       await productsApi.remove(id)
+      toast.success('Product moved to trash')
       loadProducts()
     } catch (err) {
       setError('Delete failed')
@@ -91,6 +95,7 @@ export default function ProductsList() {
         <FilterBar 
           filters={filters}
           onFilterChange={handleFilterChange}
+          resetSort={{ field: 'name', order: 'asc' }}
           sortFields={[
             { key: 'name', label: 'Name' },
             { key: 'price', label: 'Price' },

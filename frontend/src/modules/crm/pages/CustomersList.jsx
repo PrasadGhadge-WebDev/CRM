@@ -1,11 +1,13 @@
 import { useEffect, useCallback, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { toast } from 'react-toastify'
 import { Icon } from '../../../layouts/icons.jsx'
 import Pagination from '../../../components/Pagination.jsx'
 import FilterBar from '../../../components/FilterBar.jsx'
 import PageHeader from '../../../components/PageHeader.jsx'
 import { customersApi } from '../../../services/customers.js'
 import { useDebouncedValue } from '../../../utils/useDebouncedValue.js'
+import { useToastFeedback } from '../../../utils/useToastFeedback.js'
 
 export default function CustomersList() {
   const fileInputRef = useRef(null)
@@ -17,6 +19,7 @@ export default function CustomersList() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
+  useToastFeedback({ error, success: notice })
 
   // Filter & Sort State
   const [filters, setFilters] = useState({
@@ -70,9 +73,10 @@ export default function CustomersList() {
   }
 
   async function onDelete(id) {
-    if (!confirm('Delete customer?')) return
+    if (!confirm('Are you sure you want to move this customer to trash?')) return
     try {
       await customersApi.remove(id)
+      toast.success('Customer moved to trash')
       loadCustomers()
     } catch (err) {
       setError('Delete failed')
@@ -156,6 +160,7 @@ export default function CustomersList() {
         <FilterBar 
           filters={filters}
           onFilterChange={handleFilterChange}
+          resetSort={{ field: 'created_at', order: 'desc' }}
           sortFields={[
             { key: 'name', label: 'Name' },
             { key: 'created_at', label: 'Date Added' },

@@ -6,6 +6,11 @@ export const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
+    // Sanitize any 24-char hex IDs that might have accidentally appended suffixes like :1
+    if (config.url) {
+      config.url = config.url.replace(/([a-f\d]{24}):\d+/g, '$1');
+    }
+
     const token = localStorage.getItem('token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`

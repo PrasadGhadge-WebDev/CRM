@@ -63,9 +63,19 @@ export default function OrdersList() {
       <PageHeader title="Orders" backTo="/" />
 
       <div className="card noPadding stack">
+        <div className="padding">
+          <input
+            className="input"
+            placeholder="Search order notes..."
+            value={filters.q}
+            onChange={(e) => handleFilterChange({ q: e.target.value })}
+          />
+        </div>
+
         <FilterBar 
           filters={filters}
           onFilterChange={handleFilterChange}
+          resetSort={{ field: 'created_at', order: 'desc' }}
           sortFields={[
             { key: 'created_at', label: 'Date' },
             { key: 'total_amount', label: 'Amount' }

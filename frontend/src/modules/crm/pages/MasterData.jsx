@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
+import { toast } from 'react-toastify'
 import { masterDataApi } from '../../../services/masterData'
 import Pagination from '../../../components/Pagination.jsx'
 import { useSearchParams } from 'react-router-dom'
 import PageHeader from '../../../components/PageHeader.jsx'
+import { useToastFeedback } from '../../../utils/useToastFeedback.js'
 
 const CATEGORIES = [
   { id: 'lead-status', label: 'Lead Statuses' },
@@ -24,6 +26,7 @@ export default function MasterData() {
   const [error, setError] = useState('')
   const [editingItem, setEditingItem] = useState(null)
   const [form, setForm] = useState({ label: '', value: '', color: '#5b5ef7', order: 0 })
+  useToastFeedback({ error })
 
   useEffect(() => {
     const next = new URLSearchParams(searchParams)
@@ -67,6 +70,7 @@ export default function MasterData() {
       }
       setForm({ label: '', value: '', color: '#5b5ef7', order: 0 })
       setEditingItem(null)
+      toast.success(`Item ${editingItem ? 'updated' : 'created'} successfully`)
       loadItems()
     } catch (err) {
       setError(err.message || 'Failed to save item')
@@ -74,9 +78,10 @@ export default function MasterData() {
   }
 
   async function handleDelete(id) {
-    if (!confirm('Delete this item?')) return
+    if (!confirm('Are you sure you want to move this item to trash?')) return
     try {
       await masterDataApi.remove(activeCategory, id)
+      toast.success('Item moved to trash')
       loadItems()
     } catch (err) {
       setError(err.message || 'Failed to delete item')

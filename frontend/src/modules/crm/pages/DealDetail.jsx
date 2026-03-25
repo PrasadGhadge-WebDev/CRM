@@ -4,12 +4,14 @@ import { dealsApi } from '../../../services/deals'
 import Timeline from '../../../components/Timeline.jsx'
 import AttachmentManager from '../../../components/AttachmentManager.jsx'
 import PageHeader from '../../../components/PageHeader.jsx'
+import { useToastFeedback } from '../../../utils/useToastFeedback.js'
 
 export default function DealDetail() {
   const { id } = useParams()
   const [deal, setDeal] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  useToastFeedback({ error })
 
   useEffect(() => {
     dealsApi.get(id)

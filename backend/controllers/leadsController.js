@@ -1,6 +1,7 @@
 const Lead = require('../models/Lead');
 const LeadNote = require('../models/LeadNote');
 const { asyncHandler } = require('../middleware/asyncHandler');
+const { moveDocumentToTrash } = require('../utils/trash');
 
 function buildSearchQuery(q) {
   if (!q) return null;
@@ -10,7 +11,17 @@ function buildSearchQuery(q) {
 }
 
 exports.listLeads = asyncHandler(async (req, res) => {
-  const { companyId, status, assignedTo, q, page = 1, limit = 20, sortField = 'created_at', sortOrder = 'desc' } = req.query;
+  const {
+    companyId,
+    status,
+    source,
+    assignedTo,
+    q,
+    page = 1,
+    limit = 20,
+    sortField = 'created_at',
+    sortOrder = 'desc'
+  } = req.query;
 
   const pageNum = Math.max(1, Number(page) || 1);
   const limitNum = Math.min(100, Math.max(1, Number(limit) || 20));
@@ -20,6 +31,7 @@ exports.listLeads = asyncHandler(async (req, res) => {
   const filter = {};
   if (companyId) filter.company_id = companyId;
   if (status) filter.status = status;
+  if (source) filter.source = source;
   if (assignedTo) filter.assigned_to = assignedTo;
   if (search) filter.$or = [{ name: search }, { email: search }, { phone: search }, { source: search }];
 
@@ -60,12 +72,27 @@ exports.updateLead = asyncHandler(async (req, res) => {
 });
 
 exports.deleteLead = asyncHandler(async (req, res) => {
-  const deleted = await Lead.findByIdAndDelete(req.params.id);
-  if (!deleted) {
+  const lead = await Lead.findById(req.params.id);
+  if (!lead) {
     return res.fail('Lead not found', 404);
   }
-  await LeadNote.deleteMany({ lead_id: deleted.id });
-  res.ok(null, 'Lead deleted');
+  const leadNotes = await LeadNote.find({ lead_id: lead.id });
+  const leadPayload = lead.toObject();
+  delete leadPayload.id;
+  leadPayload._leadNotes = leadNotes.map((note) => {
+    const serialized = note.toObject();
+    delete serialized.id;
+    return serialized;
+  });
+
+  await moveDocumentToTrash({
+    entityType: 'lead',
+    document: lead,
+    data: leadPayload,
+    deletedBy: req.user?.id,
+  });
+  await LeadNote.deleteMany({ lead_id: lead.id });
+  res.ok(null, 'Lead moved to trash');
 });
 
 exports.listLeadNotes = asyncHandler(async (req, res) => {
@@ -110,4 +137,3 @@ exports.deleteLeadNote = asyncHandler(async (req, res) => {
   }
   res.ok(null, 'Lead note deleted');
 });
-

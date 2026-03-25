@@ -17,6 +17,10 @@ export const usersApi = {
     const data = await api.put(`/api/users/${id}`, payload)
     return data
   },
+  async resetPassword(id, payload) {
+    const data = await api.put(`/api/users/${id}/reset-password`, payload)
+    return data
+  },
   async remove(id) {
     const data = await api.delete(`/api/users/${id}`)
     return data

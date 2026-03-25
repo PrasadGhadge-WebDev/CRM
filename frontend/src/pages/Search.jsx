@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { searchApi } from '../services/search.js'
 import { useDebouncedValue } from '../utils/useDebouncedValue.js'
+import { useToastFeedback } from '../utils/useToastFeedback.js'
 
 export default function Search() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -13,6 +14,7 @@ export default function Search() {
   const [results, setResults] = useState({ leads: [], customers: [], deals: [] })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  useToastFeedback({ error })
 
   useEffect(() => setQ(qParam), [qParam])
 

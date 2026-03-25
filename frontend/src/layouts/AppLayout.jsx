@@ -3,15 +3,18 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import Sidebar from './Sidebar.jsx'
 import Topbar from './Topbar.jsx'
 import { useAuth } from '../context/AuthContext'
+import { hasRequiredRole, NAV_ACCESS } from '../utils/accessControl'
 
 function pageTitle(pathname) {
-  if (pathname.startsWith('/companies')) return 'COMPANIES'
   if (pathname.startsWith('/customers')) return 'CUSTOMERS'
+  if (pathname.startsWith('/leads')) return 'LEADS'
+  if (pathname.startsWith('/deals')) return 'DEALS'
+  if (pathname.startsWith('/users')) return 'USERS'
+  if (pathname.startsWith('/reports')) return 'REPORTS'
   if (pathname.startsWith('/tasks')) return 'TASKS'
-  if (pathname.startsWith('/orders')) return 'ORDERS'
-  if (pathname.startsWith('/support')) return 'SUPPORT'
-  if (pathname.startsWith('/products')) return 'PRODUCTS'
-  if (pathname.startsWith('/search')) return 'SEARCH'
+  if (pathname.startsWith('/followups')) return 'FOLLOWUPS'
+  if (pathname.startsWith('/billing')) return 'BILLING'
+  if (pathname.startsWith('/trash')) return 'TRASH'
   return 'DASHBOARD'
 }
 
@@ -78,25 +81,57 @@ export default function AppLayout() {
             <div className="crmFooterLinks">
           <Link to="/">Dashboard</Link>
           <span className="bullet">&bull;</span>
-          {(user?.role === 'Admin' || user?.role === 'Manager') && (
-            <>
-              <Link to="/companies">Companies</Link>
-              <span className="bullet">&bull;</span>
-            </>
-          )}
-          {['Admin', 'Manager', 'Sales'].includes(user?.role) && (
+          {hasRequiredRole(user?.role, NAV_ACCESS.customers) && (
             <>
               <Link to="/customers">Customers</Link>
               <span className="bullet">&bull;</span>
-              <Link to="/leads">Leads</Link>
-              <span className="bullet">&bull;</span>
-              <Link to="/lead-notes">Notes</Link>
             </>
           )}
-          {user?.role === 'Admin' && (
+          {hasRequiredRole(user?.role, NAV_ACCESS.leads) && (
             <>
+              <Link to="/leads">Leads</Link>
               <span className="bullet">&bull;</span>
+            </>
+          )}
+          {hasRequiredRole(user?.role, NAV_ACCESS.deals) && (
+            <>
+              <Link to="/deals">Deals</Link>
+              <span className="bullet">&bull;</span>
+            </>
+          )}
+          {hasRequiredRole(user?.role, NAV_ACCESS.users) && (
+            <>
               <Link to="/users">Users</Link>
+              <span className="bullet">&bull;</span>
+            </>
+          )}
+          {hasRequiredRole(user?.role, NAV_ACCESS.reports) && (
+            <>
+              <Link to="/reports">Reports</Link>
+              <span className="bullet">&bull;</span>
+            </>
+          )}
+          {hasRequiredRole(user?.role, NAV_ACCESS.tasks) && (
+            <>
+              <Link to="/tasks">Tasks</Link>
+              <span className="bullet">&bull;</span>
+            </>
+          )}
+          {hasRequiredRole(user?.role, NAV_ACCESS.followups) && (
+            <>
+              <Link to="/followups">Followups</Link>
+              <span className="bullet">&bull;</span>
+            </>
+          )}
+          {hasRequiredRole(user?.role, NAV_ACCESS.billing) && (
+            <>
+              <Link to="/billing">Billing</Link>
+              <span className="bullet">&bull;</span>
+            </>
+          )}
+          {hasRequiredRole(user?.role, NAV_ACCESS.trash) && (
+            <>
+              <Link to="/trash">Trash</Link>
             </>
           )}
         </div>
@@ -110,4 +145,3 @@ export default function AppLayout() {
     </div>
   )
 }
-

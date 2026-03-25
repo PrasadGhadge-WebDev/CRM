@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { toast } from 'react-toastify'
 import PageHeader from '../../../components/PageHeader.jsx'
 import { customersApi } from '../../../services/customers.js'
 import { masterDataApi } from '../../../services/masterData.js'
+import { normalizeDigits, validateEmail, validatePhone, validateRequired } from '../../../utils/formValidation.js'
+import { useToastFeedback } from '../../../utils/useToastFeedback.js'
 
 const emptyCustomer = {
   company_id: '',
@@ -29,6 +32,7 @@ export default function CustomerForm({ mode }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [types, setTypes] = useState([])
+  useToastFeedback({ error })
 
   const title = useMemo(() => (isEdit ? 'Edit Customer' : 'New Customer'), [isEdit])
 
@@ -60,17 +64,31 @@ export default function CustomerForm({ mode }) {
   }, [id, isEdit])
 
   function onChange(field) {
-    return (e) => setModel((prev) => ({ ...prev, [field]: e.target.value }))
+    return (e) => {
+      const value =
+        field === 'phone' || field === 'alternate_phone' ? normalizeDigits(e.target.value) : e.target.value
+      setModel((prev) => ({ ...prev, [field]: value }))
+    }
   }
 
   async function onSubmit(e) {
     e.preventDefault()
+    const validationError =
+      validateRequired('Name', model.name) ||
+      validateEmail('Email', model.email) ||
+      validatePhone('Phone', model.phone) ||
+      validatePhone('Alternate phone', model.alternate_phone)
+    if (validationError) {
+      setError(validationError)
+      return
+    }
     setSaving(true)
     setError('')
     try {
       const payload = { ...model }
       if (!payload.company_id) delete payload.company_id
       const saved = isEdit ? await customersApi.update(id, payload) : await customersApi.create(payload)
+      toast.success(`Customer ${isEdit ? 'updated' : 'created'} successfully`)
       navigate(`/customers/${saved.id}`)
     } catch (err) {
       setError(err.message || 'Failed to save')
@@ -111,16 +129,16 @@ export default function CustomerForm({ mode }) {
             </div>
             <div className="field">
               <label>Email</label>
-              <input className="input" value={model.email} onChange={onChange('email')} />
+              <input className="input" type="email" value={model.email} onChange={onChange('email')} />
             </div>
 
             <div className="field">
               <label>Phone</label>
-              <input className="input" value={model.phone} onChange={onChange('phone')} />
+              <input className="input" value={model.phone} onChange={onChange('phone')} inputMode="numeric" maxLength={10} />
             </div>
             <div className="field">
               <label>Alternate Phone</label>
-              <input className="input" value={model.alternate_phone} onChange={onChange('alternate_phone')} />
+              <input className="input" value={model.alternate_phone} onChange={onChange('alternate_phone')} inputMode="numeric" maxLength={10} />
             </div>
 
             <div className="field">

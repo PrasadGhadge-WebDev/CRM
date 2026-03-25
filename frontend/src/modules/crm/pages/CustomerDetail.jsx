@@ -1,16 +1,19 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { toast } from 'react-toastify'
 import { customersApi } from '../../../services/customers.js'
 import { workflowApi } from '../../../services/workflow.js'
 import Timeline from '../../../components/Timeline.jsx'
 import AttachmentManager from '../../../components/AttachmentManager.jsx'
 import PageHeader from '../../../components/PageHeader.jsx'
+import { useToastFeedback } from '../../../utils/useToastFeedback.js'
 
 export default function CustomerDetail() {
   const { id } = useParams()
   const [customer, setCustomer] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  useToastFeedback({ error })
 
   useEffect(() => {
     let canceled = false
@@ -41,7 +44,7 @@ export default function CustomerDetail() {
         orderItems: [{ name: 'Implementation Service', quantity: 1, price: 500 }],
         totalAmount: 500
       })
-      alert('Order created successfully!')
+      toast.success('Order created successfully')
     } catch (e) {
       setError('Order creation failed')
     }
@@ -57,7 +60,7 @@ export default function CustomerDetail() {
         description: 'New ticket from customer detail page',
         priority: 'medium'
       })
-      alert('Support ticket created!')
+      toast.success('Support ticket created successfully')
     } catch (e) {
       setError('Ticket creation failed')
     }

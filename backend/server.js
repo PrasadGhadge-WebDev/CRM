@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const morgan = require('morgan');
 const logger = require('./utils/logger');
+const { ensureDefaultAdmin } = require('./utils/defaultAdmin');
 const apiResponse = require('./middleware/apiResponse');
 
 const { connectDB } = require('./config/db');
@@ -49,6 +50,7 @@ app.use('/api/workflow', require('./routes/workflow'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/attachments', require('./routes/attachments'));
 app.use('/api/search', require('./routes/search'));
+app.use('/api/trash', require('./routes/trash'));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use(notFound);
@@ -68,6 +70,7 @@ async function connectWithRetry() {
   try {
     await connectDB();
     logger.info('MongoDB connected');
+    await ensureDefaultAdmin();
   } catch (err) {
     logger.error('MongoDB connection failed, retrying in 5s:', err.message || err);
     setTimeout(() => {

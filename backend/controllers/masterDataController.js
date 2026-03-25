@@ -3,6 +3,7 @@ const LeadSource = require('../models/LeadSource');
 const CustomerType = require('../models/CustomerType');
 const IndustryType = require('../models/IndustryType');
 const { asyncHandler } = require('../middleware/asyncHandler');
+const { moveDocumentToTrash } = require('../utils/trash');
 
 const models = {
   'lead-status': LeadStatus,
@@ -60,9 +61,10 @@ exports.updateMasterData = asyncHandler(async (req, res) => {
 exports.deleteMasterData = asyncHandler(async (req, res) => {
   const { type, id } = req.params;
   const Model = getModel(type);
-  const deleted = await Model.findByIdAndDelete(id);
-  if (!deleted) {
+  const item = await Model.findById(id);
+  if (!item) {
     return res.fail('Item not found', 404);
   }
-  res.ok(null, 'Item deleted');
+  await moveDocumentToTrash({ entityType: type, document: item, deletedBy: req.user?.id });
+  res.ok(null, 'Item moved to trash');
 });

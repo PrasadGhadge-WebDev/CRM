@@ -1,5 +1,6 @@
 const Deal = require('../models/Deal');
 const { asyncHandler } = require('../middleware/asyncHandler');
+const { moveDocumentToTrash } = require('../utils/trash');
 
 function buildSearchQuery(q) {
   if (!q) return null;
@@ -60,6 +61,6 @@ exports.deleteDeal = asyncHandler(async (req, res) => {
   if (!deal) {
     return res.fail('Deal not found', 404);
   }
-  await deal.deleteOne();
-  res.ok(null, 'Deal deleted');
+  await moveDocumentToTrash({ entityType: 'deal', document: deal, deletedBy: req.user?.id });
+  res.ok(null, 'Deal moved to trash');
 });

@@ -1,9 +1,26 @@
 const mongoose = require('mongoose');
 const Activity = require('../models/Activity');
 const { asyncHandler } = require('../middleware/asyncHandler');
+const { moveDocumentToTrash } = require('../utils/trash');
+
+function buildSearchQuery(q) {
+  if (!q) return null;
+  const safe = String(q).trim();
+  if (!safe) return null;
+  return { $regex: safe.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' };
+}
 
 exports.listActivities = asyncHandler(async (req, res) => {
-  const { related_to, related_type, activity_type, page = 1, limit = 20, urgency, status: statusFilter } = req.query;
+  const {
+    related_to,
+    related_type,
+    activity_type,
+    q,
+    page = 1,
+    limit = 20,
+    urgency,
+    status: statusFilter
+  } = req.query;
   let { sortField, sortOrder } = req.query;
   
   const pageNum = Math.max(1, Number(page) || 1);
@@ -14,12 +31,14 @@ exports.listActivities = asyncHandler(async (req, res) => {
   const sort = { [sortField]: sortOrder };
 
   const filter = {};
+  const search = buildSearchQuery(q);
   if (related_to && mongoose.Types.ObjectId.isValid(related_to)) {
     filter.related_to = related_to;
   }
   if (related_type) filter.related_type = related_type;
   if (activity_type) filter.activity_type = activity_type;
   if (statusFilter) filter.status = statusFilter;
+  if (search) filter.description = search;
 
   if (urgency) {
     const today = new Date();
@@ -71,6 +90,6 @@ exports.deleteActivity = asyncHandler(async (req, res) => {
   if (!activity) {
     return res.fail('Activity not found', 404);
   }
-  await activity.deleteOne();
-  res.ok(null, 'Activity deleted');
+  await moveDocumentToTrash({ entityType: 'activity', document: activity, deletedBy: req.user?.id });
+  res.ok(null, 'Activity moved to trash');
 });

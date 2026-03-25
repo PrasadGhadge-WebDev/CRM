@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import PageHeader from '../../../components/PageHeader.jsx'
 import { companiesApi } from '../../../services/companies.js'
+import { normalizeDigits, validateEmail, validatePhone, validateRequired, isValidUrl } from '../../../utils/formValidation.js'
+import { useToastFeedback } from '../../../utils/useToastFeedback.js'
 
 const emptyCompany = {
   company_name: '',
@@ -30,6 +32,7 @@ export default function CompanyForm({ mode }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [logoHint, setLogoHint] = useState('')
+  useToastFeedback({ error: loading ? '' : error })
 
   const title = useMemo(() => (isEdit ? 'Edit Company' : 'New Company'), [isEdit])
 
@@ -59,7 +62,10 @@ export default function CompanyForm({ mode }) {
   }, [id, isEdit])
 
   function onChange(field) {
-    return (e) => setModel((prev) => ({ ...prev, [field]: e.target.value }))
+    return (e) => {
+      const value = field === 'phone' ? normalizeDigits(e.target.value) : e.target.value
+      setModel((prev) => ({ ...prev, [field]: value }))
+    }
   }
 
   function onLogoFile(e) {
@@ -89,6 +95,15 @@ export default function CompanyForm({ mode }) {
 
   async function onSubmit(e) {
     e.preventDefault()
+    const validationError =
+      validateRequired('Company name', model.company_name) ||
+      validateEmail('Email', model.email) ||
+      validatePhone('Phone', model.phone) ||
+      (!isValidUrl(model.website) ? 'Enter a valid website URL' : '')
+    if (validationError) {
+      setError(validationError)
+      return
+    }
     setSaving(true)
     setError('')
 
@@ -133,7 +148,7 @@ export default function CompanyForm({ mode }) {
             </div>
             <div className="field">
               <label>Phone</label>
-              <input className="input" value={model.phone} onChange={onChange('phone')} />
+              <input className="input" value={model.phone} onChange={onChange('phone')} inputMode="numeric" maxLength={10} />
             </div>
 
             <div className="field">

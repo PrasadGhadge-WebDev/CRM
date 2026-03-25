@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { toast } from 'react-toastify'
 import PageHeader from '../../../components/PageHeader.jsx'
 import { productsApi } from '../../../services/products.js'
+import { validateNonNegativeNumber, validateRequired } from '../../../utils/formValidation.js'
+import { useToastFeedback } from '../../../utils/useToastFeedback.js'
 
 export default function ProductForm({ mode = 'create' }) {
   const { id } = useParams()
@@ -9,6 +12,7 @@ export default function ProductForm({ mode = 'create' }) {
   const [loading, setLoading] = useState(mode === 'edit')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  useToastFeedback({ error })
 
   const [form, setForm] = useState({
     name: '',
@@ -52,6 +56,14 @@ export default function ProductForm({ mode = 'create' }) {
 
   async function handleSubmit(e) {
     e.preventDefault()
+    const validationError =
+      validateRequired('Product name', form.name) ||
+      validateNonNegativeNumber('Price', form.price) ||
+      validateNonNegativeNumber('Stock quantity', form.stock_quantity)
+    if (validationError) {
+      setError(validationError)
+      return
+    }
     setBusy(true)
     setError('')
     try {
@@ -60,6 +72,7 @@ export default function ProductForm({ mode = 'create' }) {
       } else {
         await productsApi.create(form)
       }
+      toast.success(`Product ${mode === 'edit' ? 'updated' : 'created'} successfully`)
       navigate('/products')
     } catch (err) {
       setError(err.response?.data?.message || 'Save failed')
@@ -117,6 +130,7 @@ export default function ProductForm({ mode = 'create' }) {
                 className="input" 
                 type="number" 
                 step="0.01" 
+                min="0"
                 name="price" 
                 value={form.price} 
                 onChange={handleChange} 
@@ -128,6 +142,7 @@ export default function ProductForm({ mode = 'create' }) {
               <input 
                 className="input" 
                 type="number" 
+                min="0"
                 name="stock_quantity" 
                 value={form.stock_quantity} 
                 onChange={handleChange} 

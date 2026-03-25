@@ -65,9 +65,19 @@ export default function SupportList() {
       <PageHeader title="Support Tickets" backTo="/" />
 
       <div className="card noPadding stack">
+        <div className="padding">
+          <input
+            className="input"
+            placeholder="Search subject/description/category..."
+            value={filters.q}
+            onChange={(e) => handleFilterChange({ q: e.target.value })}
+          />
+        </div>
+
         <FilterBar 
           filters={filters}
           onFilterChange={handleFilterChange}
+          resetSort={{ field: 'created_at', order: 'desc' }}
           sortFields={[
             { key: 'created_at', label: 'Date' },
             { key: 'priority', label: 'Priority' }

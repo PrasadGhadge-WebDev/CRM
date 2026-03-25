@@ -12,6 +12,7 @@ router.use(authorize('Admin'));
 router.get('/', controller.listUsers);
 router.post('/', controller.createUser);
 router.get('/:id', validateObjectId('id'), controller.getUser);
+router.put('/:id/reset-password', validateObjectId('id'), controller.resetUserPassword);
 router.put('/:id', validateObjectId('id'), controller.updateUser);
 router.delete('/:id', validateObjectId('id'), controller.deleteUser);
 

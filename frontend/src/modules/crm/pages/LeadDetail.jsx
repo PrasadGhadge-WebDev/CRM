@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { toast } from 'react-toastify'
 import { leadsApi } from '../../../services/leads.js'
 import { workflowApi } from '../../../services/workflow.js'
 import { useAuth } from '../../../context/AuthContext'
 import Timeline from '../../../components/Timeline.jsx'
 import AttachmentManager from '../../../components/AttachmentManager.jsx'
 import PageHeader from '../../../components/PageHeader.jsx'
+import { useToastFeedback } from '../../../utils/useToastFeedback.js'
 
 export default function LeadDetail() {
   const { id } = useParams()
   const [lead, setLead] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  useToastFeedback({ error })
 
   useEffect(() => {
     let canceled = false
@@ -40,6 +43,7 @@ export default function LeadDetail() {
   async function handleAssign() {
     try {
       const updated = await workflowApi.assignLead(id, user.id)
+      toast.success('Lead assigned successfully')
       setLead(updated)
     } catch (e) {
       setError('Assignment failed')
@@ -51,6 +55,7 @@ export default function LeadDetail() {
       await workflowApi.convertToDeal(id, { name: `Deal for ${lead.name}`, value: 0 })
       // Refresh lead
       const updated = await leadsApi.get(id)
+      toast.success('Lead converted to deal successfully')
       setLead(updated)
     } catch (e) {
       setError('Conversion failed')
@@ -109,6 +114,10 @@ export default function LeadDetail() {
             <div className="kv">
               <div className="k">Assigned To</div>
               <div className="v">{lead.assigned_to || '-'}</div>
+            </div>
+            <div className="kv">
+              <div className="k">Follow-up Date</div>
+              <div className="v">{lead.follow_up_date ? new Date(lead.follow_up_date).toLocaleDateString() : '-'}</div>
             </div>
           </div>
         </div>

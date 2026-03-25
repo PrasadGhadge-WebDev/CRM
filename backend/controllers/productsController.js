@@ -1,5 +1,6 @@
 const Product = require('../models/Product');
 const { asyncHandler } = require('../middleware/asyncHandler');
+const { moveDocumentToTrash } = require('../utils/trash');
 
 function buildSearchQuery(q) {
   if (!q) return null;
@@ -50,7 +51,8 @@ exports.updateProduct = asyncHandler(async (req, res) => {
 });
 
 exports.deleteProduct = asyncHandler(async (req, res) => {
-  const product = await Product.findByIdAndDelete(req.params.id);
+  const product = await Product.findById(req.params.id);
   if (!product) return res.fail('Product not found', 404);
-  res.ok(null, 'Product deleted');
+  await moveDocumentToTrash({ entityType: 'product', document: product, deletedBy: req.user?.id });
+  res.ok(null, 'Product moved to trash');
 });

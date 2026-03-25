@@ -1,5 +1,7 @@
 export default function Pagination({ page, limit, total, onPageChange, onLimitChange }) {
-  const totalPages = Math.ceil(total / limit)
+  const showAll = String(limit).toLowerCase() === 'all'
+  const numericLimit = Number(limit) || 0
+  const totalPages = showAll ? 1 : Math.ceil(total / numericLimit)
   
   return (
     <div className="pagination row">
@@ -7,7 +9,7 @@ export default function Pagination({ page, limit, total, onPageChange, onLimitCh
         <button 
           className="btn secondary small" 
           onClick={() => onPageChange(page - 1)}
-          disabled={page <= 1}
+          disabled={showAll || page <= 1}
         >
           Previous
         </button>
@@ -19,7 +21,7 @@ export default function Pagination({ page, limit, total, onPageChange, onLimitCh
         <button 
           className="btn secondary small" 
           onClick={() => onPageChange(page + 1)}
-          disabled={page >= totalPages}
+          disabled={showAll || page >= totalPages}
         >
           Next
         </button>
@@ -32,12 +34,16 @@ export default function Pagination({ page, limit, total, onPageChange, onLimitCh
             className="input small" 
             style={{ width: 'auto', padding: '2px 8px' }}
             value={limit}
-            onChange={(e) => onLimitChange(Number(e.target.value))}
+            onChange={(e) => {
+              const nextValue = e.target.value
+              onLimitChange(nextValue === 'all' ? 'all' : Number(nextValue))
+            }}
           >
             <option value="5">5</option>
             <option value="10">10</option>
             <option value="20">20</option>
             <option value="50">50</option>
+            <option value="all">All</option>
           </select>
         </div>
       )}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { authApi } from '../services/auth'
+import { useToastFeedback } from '../utils/useToastFeedback.js'
 
 export default function Profile() {
   const { user, refreshUser, updateUser } = useAuth()
@@ -9,6 +10,7 @@ export default function Profile() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  useToastFeedback({ error, success: message })
 
   useEffect(() => {
     let cancelled = false

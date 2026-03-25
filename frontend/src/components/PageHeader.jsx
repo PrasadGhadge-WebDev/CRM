@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom'
-import { Icon } from '../layouts/icons.jsx'
 
 export default function PageHeader({
   title,
@@ -23,7 +22,6 @@ export default function PageHeader({
     <div className="pageHeader">
       <div className="pageHeaderIntro">
         <button className="btn pageBackBtn" type="button" onClick={handleBack}>
-          <Icon name="arrowLeft" />
           {backLabel}
         </button>
         <div>
